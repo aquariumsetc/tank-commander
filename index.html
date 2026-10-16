@@ -1,0 +1,4817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tank Commander">
+<meta name="theme-color" content="#0d0e0c">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAACx0lEQVR4nO3dQW7TQBiAURexbHsq1hyDQ3EM1tytrCoV0ZC4ber5v7y3dkajyaeRFSeZu4fH+6cNIr4cPQH4SIImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KV+PnsBn+f3z+9FTONy3H7+OnsLV3T083j8dPYlrEvK/ymG75SAlHbTd+XXldUkHze0RNCmCJkXQpAiaFEGTcjNPCvnbSh/dfeSDHjs0KYImRdCkCJoUQZMiaFIETYqgSfFg5UZVf7Uy7idYKz3huhWT4h91yyHmY0xa9zFBT1rUoinrPyLoKYtZN+F9WD7oCYt4S1Z/P5YPGvYQNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoElJHuv22qlN7/nneeOt/8/9z5Y/1m3PQl5y/Jjx3j/eyse8ZW45Ll1k133OdUdJBL13kc9db7y5EkHDs/FBv3V3OfU64802Pmh4SdCkCJqU5YOu3eNxXcsHvW3/j/qtT7BOvc54s40Ietvs1FxmTNDbdjrqvbvMueuNN9fy3+WAPUbt0HCOoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEn5Az/ljvbMcP+oAAAAAElFTkSuQmCC">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- old inline icon kept for reference: <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230d0e0c'/><g fill='%23c9a85a'><rect x='40' y='70' width='100' height='50' rx='6'/><rect x='55' y='50' width='70' height='30' rx='4'/><rect x='120' y='60' width='40' height='8'/></g></svg> -->
+<title>Tank Commander</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  overflow: hidden; background: #0d0e0c; color: #d6d2c3;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none; overscroll-behavior: none;
+  color-scheme: dark;
+}
+#game {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%; display: block;
+  touch-action: none;
+  background: #1a1e18;
+}
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(13, 14, 12, 0.94);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top, 20px) + 16px) 20px calc(env(safe-area-inset-bottom, 20px) + 16px);
+  z-index: 100; overflow-y: auto;
+}
+.title {
+  font-family: 'Arial Narrow', 'Helvetica Neue', ui-sans-serif, sans-serif;
+  font-weight: 900; font-size: clamp(2.2rem, 9vw, 3.8rem);
+  letter-spacing: 0.08em; margin: 0;
+  color: #c9a85a;
+  line-height: 1;
+}
+.title-sub {
+  font-size: 0.7rem; letter-spacing: 0.35em;
+  color: #6b7266; margin: 6px 0 28px;
+  font-weight: 500;
+}
+.panel {
+  background: #141612;
+  border: 1px solid #2a2e26;
+  padding: 16px;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 14px;
+}
+.panel-label {
+  font-size: 0.65rem; letter-spacing: 0.3em;
+  color: #6b7266; margin-bottom: 10px;
+}
+.tank-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.tank-card {
+  background: #0d0e0c;
+  border: 1px solid #2a2e26;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+  text-align: left;
+}
+.tank-card:hover { border-color: #4a5048; }
+.tank-card.selected {
+  border-color: #c9a85a;
+  background: #1a1b14;
+}
+.tank-card h3 {
+  margin: 0 0 2px; font-size: 0.9rem;
+  color: #d6d2c3; font-weight: 600;
+  font-family: 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  letter-spacing: 0.05em;
+}
+.tank-card .desc {
+  font-size: 0.68rem; color: #6b7266;
+  margin-bottom: 8px; line-height: 1.3;
+}
+.bars { display: grid; grid-template-columns: 50px 1fr; gap: 2px 6px; font-size: 0.6rem; }
+.bars .lbl { color: #6b7266; align-self: center; }
+.bars .bar { height: 4px; background: #1f221d; align-self: center; }
+.bars .bar > div { height: 100%; background: #c9a85a; }
+
+.map-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.map-card {
+  background: #0d0e0c;
+  border: 1px solid #2a2e26;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+.map-card.selected { border-color: #c9a85a; background: #1a1b14; }
+.map-card h3 {
+  margin: 0 0 2px; font-size: 0.9rem; color: #d6d2c3; font-weight: 600;
+  font-family: 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  letter-spacing: 0.05em;
+}
+.map-card .desc { font-size: 0.68rem; color: #6b7266; line-height: 1.3; }
+.map-swatch {
+  width: 100%; height: 40px; margin-top: 6px;
+  border: 1px solid #2a2e26; position: relative; overflow: hidden;
+}
+
+.panel-label { display: flex; align-items: center; justify-content: space-between; }
+.points-badge {
+  color: #c9a85a; font-size: 0.7rem; letter-spacing: 0.1em;
+  background: #1a1b14; padding: 3px 8px; border: 1px solid #3a3f36;
+}
+
+.armory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.armory-row {
+  background: #0d0e0c; border: 1px solid #2a2e26;
+  padding: 8px 10px; display: flex; align-items: center; gap: 8px;
+}
+.armory-row .lbl {
+  flex: 1; font-size: 0.72rem;
+  color: #d6d2c3;
+  font-family: 'Arial Narrow', sans-serif; letter-spacing: 0.08em;
+}
+.armory-row .lbl small {
+  display: block; color: #6b7266; font-size: 0.6rem;
+  font-family: ui-monospace, monospace; letter-spacing: 0;
+}
+.armory-row .pips { display: flex; gap: 2px; }
+.armory-row .pip { width: 8px; height: 14px; background: #1f221c; border: 1px solid #2a2e26; }
+.armory-row .pip.on { background: #c9a85a; border-color: #c9a85a; }
+.armory-row .buy-btn {
+  background: #1a1b14; border: 1px solid #3a3f36; color: #c9a85a;
+  font-family: ui-monospace, monospace; font-size: 0.65rem;
+  padding: 4px 7px; cursor: pointer; min-width: 30px;
+}
+.armory-row .buy-btn:disabled { color: #3a3f36; cursor: not-allowed; }
+.armory-row .buy-btn:not(:disabled):active { background: #c9a85a; color: #0d0e0c; }
+.armory-row .buy-btn.maxed { color: #6ba35a; border-color: #6ba35a; }
+.armory-note {
+  font-size: 0.6rem; color: #6b7266; margin-top: 10px; text-align: center;
+}
+.reset-btn {
+  display: block; margin: 8px auto 0;
+  background: none; border: none; color: #6b7266;
+  font-family: ui-monospace, monospace; font-size: 0.6rem;
+  cursor: pointer; letter-spacing: 0.1em;
+}
+.reset-btn:hover { color: #d46a5a; }
+.slider-row {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0;
+  font-size: 0.65rem; letter-spacing: 0.12em; color: #8f9385;
+}
+.slider-row > span:first-child { width: 64px; }
+.slider-row input[type=range] { flex: 1; accent-color: #c9a85a; }
+.slider-val { width: 34px; text-align: right; color: #c9a85a; font-family: ui-monospace, monospace; }
+.voice-btn { flex: 1; margin: 0; text-align: left; font-size: 0.7rem; color: #8f9385; }
+.voice-btn.on { color: #c9a85a; }
+
+.btn {
+  background: #c9a85a;
+  color: #0d0e0c;
+  border: none;
+  padding: 14px 28px;
+  font-family: 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  margin: 4px;
+  min-width: 220px;
+}
+.btn:active { background: #a68744; }
+.btn.secondary {
+  background: transparent;
+  color: #8f9385;
+  border: 1px solid #3a3f36;
+}
+.btn.secondary:active { background: #1a1b14; color: #c9a85a; }
+.hidden { display: none !important; }
+
+.controls-info {
+  font-size: 0.65rem; color: #6b7266;
+  text-align: center; max-width: 440px;
+  margin-top: 14px; line-height: 1.6;
+}
+.controls-info strong { color: #8f9385; font-weight: 600; }
+
+.pause-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 10px) + 10px);
+  right: calc(env(safe-area-inset-right, 10px) + 10px);
+  background: rgba(13, 14, 12, 0.7);
+  border: 1px solid #3a3f36;
+  color: #c9a85a;
+  width: 40px; height: 40px;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer;
+  z-index: 50;
+  display: none;
+}
+.pause-btn.visible { display: block; }
+
+#install-hint {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 10px) + 10px);
+  left: 50%; transform: translateX(-50%);
+  background: #141612;
+  border: 1px solid #2a2e26;
+  color: #8f9385;
+  font-size: 0.7rem;
+  padding: 8px 14px;
+  z-index: 80;
+  cursor: pointer;
+  display: none;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<button class="pause-btn" id="pauseBtn">⏸</button>
+<button class="pause-btn" id="spyExitBtn" title="Leave companion map">✕</button>
+
+<div class="overlay" id="menu">
+  <h1 class="title">TANK COMMANDER</h1>
+  <div class="title-sub">FIELD DEPLOYMENT</div>
+
+  <div class="panel">
+    <div class="panel-label">SELECT VEHICLE</div>
+    <div class="tank-grid" id="tankSelect"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">SELECT MAP</div>
+    <div class="map-grid" id="mapSelect"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">
+      ARMORY
+      <span id="pointsDisplay" class="points-badge">0 PTS</span>
+    </div>
+    <div class="armory-grid" id="armoryGrid"></div>
+    <div class="armory-note" id="armoryNote">+1 point per enemy destroyed. Upgrades apply to your tank.</div>
+    <button class="reset-btn" id="resetProgBtn" title="Reset progression">⟲ RESET</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">AUDIO &amp; VOICE</div>
+    <div class="slider-row"><span>MUSIC</span><input type="range" id="musicVol" min="0" max="100" step="5"><span class="slider-val" id="musicVolVal">50</span></div>
+    <div class="slider-row"><span>EFFECTS</span><input type="range" id="sfxVol" min="0" max="100" step="5"><span class="slider-val" id="sfxVolVal">80</span></div>
+    <div class="slider-row"><span>VOICE</span><button class="reset-btn voice-btn" id="voiceSetBtn">🎙 OFF</button><span class="slider-val" id="voiceAvail"></span></div>
+    <div class="armory-note">Voice commands: "fire", "smoke", "medic", "supply", "map", "AP / HE / tracer / sabot", "full speed", "forward", "slow", "reverse", "stop", "lob", "direct". Needs microphone access; on iPhone it also needs an internet connection.</div>
+  </div>
+
+  <button class="btn" id="startBtn">DEPLOY ▸</button>
+  <button class="btn secondary" id="spyBtn" title="Use this device as a live tactical map for a game running on another device">📡 COMPANION MAP</button>
+  <div class="armory-note" id="spyNote">Open this same page on a second device (same account), tap COMPANION MAP there, and it mirrors the battlefield live while you play here.</div>
+
+  <div class="controls-info">
+    <strong>View:</strong> Driver's perspective — forward is always up on screen. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
+    <strong>Drive:</strong> Left joystick — <em>hold where you want to go</em>. Push up for forward gears (further = faster), down for reverse, left/right to steer. Release to brake. At gear 0 with steering, the tank pivots in place.<br>
+    <strong>Aim:</strong> Tap anywhere on the right to aim the turret. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
+    <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire.<br>
+    <strong>Keys:</strong> W/S gears, A/D steer, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-4 ammo, M map, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
+  </div>
+</div>
+
+<div class="overlay hidden" id="gameover">
+  <div class="title-sub" id="goTitleSub">BATTLE REPORT</div>
+  <h1 class="title" id="goTitle">VICTORY</h1>
+  <div class="panel">
+    <div class="panel-label" id="goStats">—</div>
+  </div>
+  <button class="btn" id="restartBtn">REDEPLOY ▸</button>
+  <button class="btn secondary" id="menuBtn">MAIN MENU</button>
+</div>
+
+<div id="install-hint">⤒ Add to Home Screen to play offline</div>
+
+<script>
+'use strict';
+
+/* ====================================================================
+   TANK COMMANDER
+   - Top-down tank combat with sloped-armor deflection physics
+   - 4 tank classes, 4 ammo types, separate hull/turret rotation
+   - Team deathmatch vs AI, respawn & reload at base
+   - Touch and keyboard controls
+   ==================================================================== */
+
+/* ============== CONFIG ============== */
+
+const WORLD_W = 4000;
+const WORLD_H = 2500;
+
+const BLUE_BASE = { x: 420, y: WORLD_H / 2, r: 240, team: 'blue' };
+const RED_BASE  = { x: WORLD_W - 420, y: WORLD_H / 2, r: 240, team: 'red' };
+
+const TANK_TYPES = {
+  HEAVY: {
+    name: 'HEAVY', desc: 'Thick armor, big gun, slow',
+    gears: [0, 24, 40, 58], reverse: -22,
+    accel: 28, decel: 55, turnRate: 1.35,
+    armor: { front: 185, side: 100, rear: 65 },
+    hp: 240, reloadBase: 6.3, gunPower: 1.6,
+    size: { w: 42, h: 58 },
+    turretSize: { w: 28, h: 32 },
+    barrelLen: 44, barrelWidth: 4.5,
+    hullCol: '#5a6e4a', turretCol: '#4a5e3a', trimCol: '#2a3a1e',
+    sight: 950,
+    stat: { armor: 1.0, speed: 0.3, firepower: 0.95, agility: 0.3 },
+  },
+  MEDIUM: {
+    name: 'MEDIUM', desc: 'Balanced all-rounder',
+    gears: [0, 38, 65, 92], reverse: -34,
+    accel: 60, decel: 80, turnRate: 1.95,
+    armor: { front: 115, side: 68, rear: 45 },
+    hp: 165, reloadBase: 4.2, gunPower: 1.2,
+    size: { w: 34, h: 48 },
+    turretSize: { w: 22, h: 26 },
+    barrelLen: 38, barrelWidth: 3.5,
+    hullCol: '#6b663f', turretCol: '#5b5635', trimCol: '#3a3620',
+    sight: 1050,
+    stat: { armor: 0.65, speed: 0.6, firepower: 0.7, agility: 0.6 },
+  },
+  LIGHT: {
+    name: 'LIGHT', desc: 'Fast, maneuverable, thin armor',
+    gears: [0, 54, 94, 134], reverse: -46,
+    accel: 95, decel: 120, turnRate: 2.65,
+    armor: { front: 65, side: 42, rear: 28 },
+    hp: 105, reloadBase: 2.8, gunPower: 0.95,
+    size: { w: 28, h: 42 },
+    turretSize: { w: 18, h: 22 },
+    barrelLen: 32, barrelWidth: 3,
+    hullCol: '#4a5468', turretCol: '#3a4458', trimCol: '#1e2838',
+    sight: 1150,
+    stat: { armor: 0.35, speed: 0.85, firepower: 0.5, agility: 0.85 },
+  },
+  SCOUT: {
+    name: 'SCOUT', desc: 'Very fast, long sight, fragile',
+    gears: [0, 76, 126, 176], reverse: -62,
+    accel: 140, decel: 170, turnRate: 3.3,
+    armor: { front: 35, side: 24, rear: 18 },
+    hp: 68, reloadBase: 2.2, gunPower: 0.65,
+    size: { w: 22, h: 36 },
+    turretSize: { w: 16, h: 20 },
+    barrelLen: 28, barrelWidth: 2.5,
+    hullCol: '#6b4a4a', turretCol: '#5b3a3a', trimCol: '#3a1e1e',
+    sight: 1350,
+    stat: { armor: 0.2, speed: 1.0, firepower: 0.35, agility: 1.0 },
+  },
+};
+
+const AMMO = {
+  AP: {
+    key: 'AP', name: 'AP', full: 'Armor Piercing',
+    color: '#ffcc55', tracer: '#ff8822',
+    v: 540, dmg: 72, pen: 155,
+    range: 1250, drop: 0,
+    size: 3, trailLen: 10, luminous: false,
+  },
+  HE: {
+    key: 'HE', name: 'HE', full: 'High Explosive',
+    color: '#ff6633', tracer: '#ff3300',
+    v: 340, dmg: 50, pen: 55,
+    range: 900, drop: 0,
+    size: 4, trailLen: 7, luminous: false,
+    splashR: 85, splashDmg: 65,
+  },
+  TRC: {
+    key: 'TRC', name: 'TRC', full: 'Tracer (illuminates)',
+    color: '#66ff88', tracer: '#00ff66',
+    v: 420, dmg: 42, pen: 82,
+    range: 1050, drop: 0,
+    size: 3, trailLen: 28, luminous: true, luminousR: 260,
+  },
+  SBT: {
+    key: 'SBT', name: 'SBT', full: 'APFSDS (hypervelocity)',
+    color: '#eef6ff', tracer: '#a0c8e8',
+    v: 840, dmg: 62, pen: 220,
+    range: 1400, drop: 0,
+    size: 2, trailLen: 18, luminous: false,
+  },
+};
+const AMMO_ORDER = ['AP', 'HE', 'TRC', 'SBT'];
+const AMMO_LOADOUT = { AP: 15, HE: 8, TRC: 10, SBT: 4 };
+
+const RICOCHET_ANGLE = 70 * Math.PI / 180;
+
+/* ---- SHELL ARC (indirect fire) ----
+   elevation 0 = flat direct fire (hits the first thing in its path).
+   elevation > 0 = lobbed shell: rises, clears anything lower than its altitude,
+   and lands at a set distance. HE detonates on the ground; AP/SBT/TRC only hurt
+   a tank they come down on. */
+const ARC_MIN_DIST   = 180;    // landing distance at the smallest elevation
+const ARC_APEX_RATIO = 0.28;   // apex height = landDist * ratio (buildings are 60-114 tall)
+const ARC_HIT_ALT    = 20;     // shell can strike a tank below this altitude
+const ARC_HE_GROUND_SPLASH = 1.0; // HE splash on ground impact uses full radius
+function arcLandDist(elev, ammoSpec) {
+  return ARC_MIN_DIST + clamp(elev, 0, 1) * (ammoSpec.range * 0.95 - ARC_MIN_DIST);
+}
+
+/* ---- MAPS ---- */
+const MAPS = {
+  FOREST: {
+    name: 'FOREST', desc: 'Dense tree cover · short sightlines · low hills',
+    ground: '#1a2416', groundDark: '#141c12', grid: '#1f2b1a', border: '#2a3a1e',
+    hillTint: '#243018', hillRim: '#2e3a1e',
+    obstacleType: 'tree', nObstacles: 44,
+    obstacleSizeMin: 22, obstacleSizeMax: 44,
+    sightMultiplier: 0.78,
+    pits: 0,
+    hills: 4, hillSizeMin: 160, hillSizeMax: 230,
+    ice: 0,
+    weather: 'leaves',
+    accentHint: '#5a7a4a',
+  },
+  DESERT: {
+    name: 'DESERT', desc: 'Open ground · long sightlines · dunes & pits',
+    ground: '#3a3220', groundDark: '#2a241a', grid: '#2a2418', border: '#4a3e2a',
+    hillTint: '#4a3e2a', hillRim: '#5a4e38',
+    obstacleType: 'rock', nObstacles: 14,
+    obstacleSizeMin: 30, obstacleSizeMax: 55,
+    sightMultiplier: 1.15,
+    pits: 12, pitSizeMin: 55, pitSizeMax: 100,
+    hills: 5, hillSizeMin: 220, hillSizeMax: 340,
+    ice: 0,
+    weather: 'dust',
+    accentHint: '#b89a5a',
+  },
+  SNOW: {
+    name: 'SNOW', desc: 'Icy patches reduce traction · low cover',
+    ground: '#c4ccd0', groundDark: '#8e969b', grid: '#aab2b8', border: '#8a929a',
+    hillTint: '#dde3e8', hillRim: '#aeb6bc',
+    obstacleType: 'snowtree', nObstacles: 28,
+    obstacleSizeMin: 22, obstacleSizeMax: 40,
+    sightMultiplier: 0.92,
+    pits: 0,
+    hills: 4, hillSizeMin: 180, hillSizeMax: 280,
+    ice: 10, iceSizeMin: 70, iceSizeMax: 140,
+    weather: 'snow',
+    accentHint: '#7899ad',
+  },
+  URBAN: {
+    name: 'URBAN', desc: 'City blocks · alleys & ambushes · lob shells over roofs',
+    ground: '#2a2a2c', groundDark: '#1e1e20', grid: '#303033', border: '#44444a',
+    hillTint: '#3a3a3e', hillRim: '#4a4a50',
+    obstacleType: 'building', nObstacles: 10,   // nObstacles = extra rubble piles in the streets
+    obstacleSizeMin: 16, obstacleSizeMax: 26,
+    layout: 'grid', gridX0: 760, gridY0: 300, gridPitchX: 340, gridPitchY: 310,
+    buildingMin: 60, buildingMax: 82,
+    sightMultiplier: 0.85,
+    pits: 0,
+    hills: 0,
+    ice: 0,
+    weather: 'ash',
+    accentHint: '#8a8a92',
+  },
+};
+const MAP_ORDER = ['FOREST', 'DESERT', 'SNOW', 'URBAN'];
+
+/* ---- PROGRESSION (persisted via localStorage) ---- */
+const UPGRADE_COSTS = [1, 2, 4]; // level 1, 2, 3
+const UPGRADE_MAX = 3;
+const ARMOR_PER_LEVEL  = 0.15;   // +15% effective armor per level
+const AMMO_PER_LEVEL   = 0.12;   // +12% damage AND penetration per level
+const RELOAD_PER_LEVEL = 0.14;   // -14% reload time per level
+const TURRET_PER_LEVEL = 0.20;   // +20% turret traverse per level
+
+const Progression = {
+  points: 0,
+  armor: 0,
+  reload: 0,
+  turret: 0,
+  ammo: { AP: 0, HE: 0, TRC: 0, SBT: 0 },
+  totalKills: 0,
+  totalMatches: 0,
+  load() {
+    try {
+      const raw = localStorage.getItem('tc_progression');
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (typeof d.points === 'number') this.points = d.points;
+      if (typeof d.armor === 'number')  this.armor  = clamp(d.armor,  0, UPGRADE_MAX);
+      if (typeof d.reload === 'number') this.reload = clamp(d.reload, 0, UPGRADE_MAX);
+      if (typeof d.turret === 'number') this.turret = clamp(d.turret, 0, UPGRADE_MAX);
+      if (d.ammo) for (const k of AMMO_ORDER) {
+        if (typeof d.ammo[k] === 'number') this.ammo[k] = clamp(d.ammo[k], 0, UPGRADE_MAX);
+      }
+      if (typeof d.totalKills === 'number') this.totalKills = d.totalKills;
+      if (typeof d.totalMatches === 'number') this.totalMatches = d.totalMatches;
+    } catch (e) { /* ignore */ }
+  },
+  save() {
+    try {
+      localStorage.setItem('tc_progression', JSON.stringify({
+        points: this.points, armor: this.armor,
+        reload: this.reload, turret: this.turret,
+        ammo: this.ammo,
+        totalKills: this.totalKills, totalMatches: this.totalMatches,
+      }));
+    } catch (e) { /* ignore */ }
+  },
+  costFor(level) { return level >= UPGRADE_MAX ? null : UPGRADE_COSTS[level]; },
+  tryBuyArmor()   { return this._buy('armor'); },
+  tryBuyReload()  { return this._buy('reload'); },
+  tryBuyTurret()  { return this._buy('turret'); },
+  tryBuyAmmo(k) {
+    const c = this.costFor(this.ammo[k]);
+    if (c === null || this.points < c) return false;
+    this.points -= c; this.ammo[k]++; this.save(); return true;
+  },
+  _buy(field) {
+    const c = this.costFor(this[field]);
+    if (c === null || this.points < c) return false;
+    this.points -= c; this[field]++; this.save(); return true;
+  },
+  reset() {
+    this.points = 0; this.armor = 0; this.reload = 0; this.turret = 0;
+    for (const k of AMMO_ORDER) this.ammo[k] = 0;
+    this.totalKills = 0; this.totalMatches = 0;
+    this.save();
+  },
+};
+
+/* ---- SOUND (Web Audio, synthesized) ---- */
+const Sound = {
+  ctx: null,
+  master: null,   // overall (mute)
+  sfx: null,      // in-game effects bus
+  musicBus: null, // background music bus
+  enabled: (function(){ try { return localStorage.getItem('tc_mute') !== '1'; } catch(e) { return true; } })(),
+  sfxVol: 0.8,
+  musicVol: 0.5,
+  engines: new Map(),   // tank id -> engine voice
+  toggle() {
+    this.enabled = !this.enabled;
+    try { localStorage.setItem('tc_mute', this.enabled ? '0' : '1'); } catch (e) {}
+    if (this.master) this.master.gain.value = this.enabled ? 0.4 : 0;
+    return this.enabled;
+  },
+  loadVolumes() {
+    try {
+      const d = JSON.parse(localStorage.getItem('tc_audio') || '{}');
+      if (typeof d.sfx === 'number') this.sfxVol = clamp(d.sfx, 0, 1);
+      if (typeof d.music === 'number') this.musicVol = clamp(d.music, 0, 1);
+    } catch (e) {}
+  },
+  saveVolumes() {
+    try { localStorage.setItem('tc_audio', JSON.stringify({ sfx: this.sfxVol, music: this.musicVol })); } catch (e) {}
+  },
+  setSfx(v) { this.sfxVol = clamp(v, 0, 1); if (this.sfx) this.sfx.gain.value = this.sfxVol; this.saveVolumes(); },
+  setMusic(v) { this.musicVol = clamp(v, 0, 1); if (this.musicBus) this.musicBus.gain.value = this.musicVol * 0.55; this.saveVolumes(); },
+  lastSoundTime: {},
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.enabled ? 0.4 : 0;
+      this.master.connect(this.ctx.destination);
+      this.sfx = this.ctx.createGain();
+      this.sfx.gain.value = this.sfxVol;
+      this.sfx.connect(this.master);
+      this.musicBus = this.ctx.createGain();
+      this.musicBus.gain.value = this.musicVol * 0.55;
+      this.musicBus.connect(this.master);
+    } catch (e) { this.ctx = null; }
+  },
+
+  /* ---- Engines: one continuous voice per nearby tank, pitch follows speed ---- */
+  _makeEngine(t) {
+    const c = this.ctx;
+    const out = c.createGain(); out.gain.value = 0;
+    // Core rumble: sawtooth through a lowpass, plus a sub-octave square for the diesel thud
+    const saw = c.createOscillator(); saw.type = 'sawtooth';
+    const sq  = c.createOscillator(); sq.type = 'square';
+    const lp  = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220; lp.Q.value = 2;
+    const sawG = c.createGain(); sawG.gain.value = 0.5;
+    const sqG  = c.createGain(); sqG.gain.value = 0.25;
+    saw.connect(sawG).connect(lp); sq.connect(sqG).connect(lp); lp.connect(out);
+    // Cylinder chug: LFO on the lowpass frequency
+    const lfo = c.createOscillator(); lfo.type = 'triangle';
+    const lfoG = c.createGain(); lfoG.gain.value = 90;
+    lfo.connect(lfoG).connect(lp.frequency);
+    // Exhaust / track noise: filtered noise loop
+    const noise = this._noiseLoop();
+    const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 500; nf.Q.value = 0.7;
+    const nG = c.createGain(); nG.gain.value = 0;
+    noise.connect(nf).connect(nG).connect(out);
+    // Track squeal: narrow high band, gain on steer
+    const sqf = c.createBiquadFilter(); sqf.type = 'bandpass'; sqf.frequency.value = 2400; sqf.Q.value = 12;
+    const sqG2 = c.createGain(); sqG2.gain.value = 0;
+    noise.connect(sqf).connect(sqG2).connect(out);
+    out.connect(this.sfx);
+    const t0 = c.currentTime;
+    saw.start(t0); sq.start(t0); lfo.start(t0); noise.start(t0);
+    const basePitch = t.spec.name === 'HEAVY' ? 38 : t.spec.name === 'MEDIUM' ? 46 : t.spec.name === 'LIGHT' ? 56 : 66;
+    return { saw, sq, lfo, lp, out, nG, sqG2, basePitch, rpm: 0, maxSpeed: t.spec.gears[3] };
+  },
+  _noiseLoop() {
+    const c = this.ctx;
+    const len = c.sampleRate * 1.5;
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+    return src;
+  },
+  updateEngines(dt) {
+    if (!this.ctx || !S.player) return;
+    const now = this.ctx.currentTime;
+    // Pick voices: the player + the 2 nearest other alive tanks in earshot
+    const want = new Map();
+    if (S.mode === 'play') {
+      const others = [];
+      for (const t of S.tanks) {
+        if (!t.alive) continue;
+        if (t.isPlayer) { want.set(t.id, t); continue; }
+        const d = dist(t, S.player);
+        if (d < 1100) others.push({ t, d });
+      }
+      others.sort((a, b) => a.d - b.d);
+      for (let i = 0; i < Math.min(2, others.length); i++) want.set(others[i].t.id, others[i].t);
+    }
+    // Retire voices no longer wanted
+    for (const [id, v] of this.engines) {
+      if (!want.has(id)) {
+        v.out.gain.setTargetAtTime(0, now, 0.08);
+        const vv = v;
+        setTimeout(() => { try { vv.saw.stop(); vv.sq.stop(); vv.lfo.stop(); vv.out.disconnect(); } catch (e) {} }, 400);
+        this.engines.delete(id);
+      }
+    }
+    // Drive the wanted ones
+    for (const [id, t] of want) {
+      let v = this.engines.get(id);
+      if (!v) { v = this._makeEngine(t); this.engines.set(id, v); }
+      const spd = Math.abs(t.speed) / v.maxSpeed;                 // 0..1
+      const throttle = Math.abs(t.targetGear) / 3;                // what the driver asks for
+      // RPM rises quickly with throttle, settles to speed; gives a rev on shift
+      const targetRpm = clamp(0.18 + spd * 0.75 + throttle * 0.2, 0.18, 1.1);
+      v.rpm += (targetRpm - v.rpm) * clamp(dt * 4, 0, 1);
+      const pitch = v.basePitch * (0.9 + v.rpm * 1.6);
+      v.saw.frequency.setTargetAtTime(pitch, now, 0.05);
+      v.sq.frequency.setTargetAtTime(pitch * 0.5, now, 0.05);
+      v.lfo.frequency.setTargetAtTime(pitch / 2.5, now, 0.05);
+      v.lp.frequency.setTargetAtTime(160 + v.rpm * 420, now, 0.08);
+      const pos = t.isPlayer ? 1 : this._posGain(t) * 0.7;
+      const load = 0.35 + v.rpm * 0.65;
+      v.out.gain.setTargetAtTime(0.22 * pos * load, now, 0.1);
+      v.nG.gain.setTargetAtTime(0.08 + spd * 0.25, now, 0.1);
+      const squeal = (Math.abs(t.steer) > 0.25 && Math.abs(t.speed) > 8) ? Math.abs(t.steer) * Math.min(1, spd * 2) : 0;
+      v.sqG2.gain.setTargetAtTime(squeal * 0.05 * pos, now, 0.12);
+    }
+  },
+  stopEngines() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const [, v] of this.engines) {
+      v.out.gain.setTargetAtTime(0, now, 0.1);
+      const vv = v;
+      setTimeout(() => { try { vv.saw.stop(); vv.sq.stop(); vv.lfo.stop(); vv.out.disconnect(); } catch (e) {} }, 500);
+    }
+    this.engines.clear();
+  },
+
+  /* ---- Reload: breech clank after the shot, ready "chunk" when the next round is seated ---- */
+  breech(pos, power = 1) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('breech', 0.1)) return;
+    const g = this._posGain(pos);
+    if (g < 0.05) return;
+    const t = this.ctx.currentTime + 0.25;   // recoil carriage settles, then the breech opens
+    // Metallic ring: two detuned high partials
+    for (const [f, d, a] of [[1800, 0.18, 0.12], [2900, 0.12, 0.07]]) {
+      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const gn = this.ctx.createGain();
+      gn.gain.setValueAtTime(a * g * power, t);
+      gn.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(gn).connect(this.sfx); o.start(t); o.stop(t + d + 0.02);
+    }
+    // Casing clatter
+    const n = this._noise(0.12);
+    const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 3;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.18 * g, t + 0.05);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+    n.connect(bp).connect(ng).connect(this.sfx); n.start(t + 0.05); n.stop(t + 0.2);
+  },
+  ready() {
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Heavy "chunk": short low thud + bright click
+    const o = this.ctx.createOscillator(); o.type = 'square';
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.09);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    o.connect(g).connect(this.sfx); o.start(t); o.stop(t + 0.11);
+    const c = this.ctx.createOscillator(); c.type = 'triangle'; c.frequency.value = 2600;
+    const cg = this.ctx.createGain();
+    cg.gain.setValueAtTime(0.08, t + 0.03); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    c.connect(cg).connect(this.sfx); c.start(t + 0.03); c.stop(t + 0.1);
+  },
+  dryFire() {
+    if (!this.enabled || !this.ctx || !this._rateLimit('dry', 0.25)) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'square'; o.frequency.value = 900;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    o.connect(g).connect(this.sfx); o.start(t); o.stop(t + 0.05);
+  },
+
+  /* ---- Music: procedural military score, scheduled ahead on a 76 BPM grid ---- */
+  music: {
+    on: false, timer: null, nextBeat: 0, beat: 0, intensity: 0,
+    start(intensity) {
+      const c = Sound.ctx; if (!c) return;
+      this.intensity = intensity;
+      if (this.on) return;
+      this.on = true; this.beat = 0; this.nextBeat = c.currentTime + 0.1;
+      this.timer = setInterval(() => this._tick(), 60);
+    },
+    stop() { this.on = false; if (this.timer) clearInterval(this.timer); this.timer = null; },
+    setIntensity(i) { this.intensity = i; },
+    _tick() {
+      const c = Sound.ctx; if (!c || !this.on) return;
+      const spb = 60 / 76;
+      while (this.nextBeat < c.currentTime + 0.35) {
+        this._beat(this.nextBeat, this.beat);
+        this.beat++; this.nextBeat += spb;
+      }
+    },
+    _beat(t, b) {
+      const c = Sound.ctx, out = Sound.musicBus, I = this.intensity;
+      const bar = Math.floor(b / 4), inBar = b % 4;
+      // Drone: A1 with a slow fifth, restarted every 4 bars so it never drifts
+      if (b % 16 === 0) {
+        for (const [f, a] of [[55, 0.22], [82.4, 0.07]]) {
+          const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+          const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 140;
+          const g = c.createGain();
+          g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(a, t + 1.5);
+          g.gain.setValueAtTime(a, t + 60 / 76 * 15); g.gain.linearRampToValueAtTime(0.001, t + 60 / 76 * 16.4);
+          o.connect(lp).connect(g).connect(out); o.start(t); o.stop(t + 60 / 76 * 16.5);
+        }
+      }
+      // Taiko on 1 and 3 (always), ghost on the "and" of 4 when intense
+      const drum = (tt, a) => {
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(110, tt); o.frequency.exponentialRampToValueAtTime(38, tt + 0.25);
+        const g = c.createGain(); g.gain.setValueAtTime(a, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.4);
+        o.connect(g).connect(out); o.start(tt); o.stop(tt + 0.42);
+      };
+      if (inBar === 0) drum(t, 0.6);
+      if (inBar === 2) drum(t, 0.45 + I * 0.15);
+      if (I > 0.5 && inBar === 3) drum(t + 60 / 76 * 0.5, 0.25);
+      // Snare (noise) on 2 and 4 when in play; rolls every 8th bar
+      if (I > 0.3 && (inBar === 1 || inBar === 3)) {
+        const hits = (bar % 8 === 7 && inBar === 3) ? 4 : 1;
+        for (let i = 0; i < hits; i++) {
+          const tt = t + i * (60 / 76 / 4);
+          const n = Sound._noise(0.15);
+          const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.9;
+          const g = c.createGain(); g.gain.setValueAtTime(0.14 * I, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.12);
+          n.connect(bp).connect(g).connect(out); n.start(tt); n.stop(tt + 0.16);
+        }
+      }
+      // Lead: sparse brass-like phrase in A minor every other bar
+      const phrase = [[0, 220], [1, 261.6], [2, 329.6], [3, 293.7], [4, 220], [6, 196], [7, 220]];
+      if (bar % 2 === 0 && inBar === 0) {
+        for (const [step, f] of phrase) {
+          const tt = t + step * (60 / 76 / 2);
+          const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f / 2;
+          const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500 + I * 500; lp.Q.value = 3;
+          const g = c.createGain();
+          const a = 0.06 + I * 0.05;
+          g.gain.setValueAtTime(0.001, tt); g.gain.linearRampToValueAtTime(a, tt + 0.05);
+          g.gain.setValueAtTime(a, tt + 0.3); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.55);
+          o.connect(lp).connect(g).connect(out); o.start(tt); o.stop(tt + 0.6);
+        }
+      }
+    },
+  },
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(()=>{});
+  },
+  // Rate-limit a given sound name to avoid pile-ups
+  _rateLimit(name, minGap) {
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    if (this.lastSoundTime[name] && now - this.lastSoundTime[name] < minGap) return false;
+    this.lastSoundTime[name] = now;
+    return true;
+  },
+  // 3D-ish positional: nearby = louder. pos is world coords; refX/refY is camera/player
+  _posGain(pos) {
+    if (!S.player) return 1;
+    const d = Math.hypot(pos.x - S.player.x, pos.y - S.player.y);
+    const falloff = Math.max(0, 1 - d / 1400);
+    return falloff * falloff;
+  },
+  fire(pos, power = 1) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('fire', 0.04)) return;
+    const g = this._posGain(pos);
+    if (g < 0.02) return;
+    const t = this.ctx.currentTime;
+    // Low thump
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80 + 20 * power, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.15);
+    gain.gain.setValueAtTime(0.7 * g * power, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(gain).connect(this.sfx);
+    osc.start(t); osc.stop(t + 0.2);
+    // Noise crack
+    const noise = this._noise(0.08);
+    const noiseGain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1500;
+    filter.Q.value = 1.5;
+    noiseGain.gain.setValueAtTime(0.5 * g, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    noise.connect(filter).connect(noiseGain).connect(this.sfx);
+    noise.start(t); noise.stop(t + 0.1);
+  },
+  explosion(pos, big = false) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('explosion', 0.08)) return;
+    const g = this._posGain(pos);
+    if (g < 0.02) return;
+    const t = this.ctx.currentTime;
+    const dur = big ? 0.6 : 0.35;
+    // Low rumble
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(70, t);
+    osc.frequency.exponentialRampToValueAtTime(25, t + dur);
+    gain.gain.setValueAtTime(0.8 * g, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(this.sfx);
+    osc.start(t); osc.stop(t + dur + 0.05);
+    // Noise burst
+    const noise = this._noise(dur);
+    const noiseGain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, t);
+    filter.frequency.exponentialRampToValueAtTime(200, t + dur);
+    noiseGain.gain.setValueAtTime(0.6 * g, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(filter).connect(noiseGain).connect(this.sfx);
+    noise.start(t); noise.stop(t + dur + 0.05);
+  },
+  impact(pos, penetrated) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('impact', 0.03)) return;
+    const g = this._posGain(pos);
+    if (g < 0.02) return;
+    const t = this.ctx.currentTime;
+    const noise = this._noise(0.1);
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = penetrated ? 800 : 2500;
+    filter.Q.value = penetrated ? 2 : 4;
+    gain.gain.setValueAtTime(0.5 * g, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    noise.connect(filter).connect(gain).connect(this.sfx);
+    noise.start(t); noise.stop(t + 0.12);
+  },
+  ricochet(pos) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('ricochet', 0.04)) return;
+    const g = this._posGain(pos);
+    if (g < 0.02) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(2200, t);
+    osc.frequency.exponentialRampToValueAtTime(800, t + 0.15);
+    gain.gain.setValueAtTime(0.25 * g, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.connect(gain).connect(this.sfx);
+    osc.start(t); osc.stop(t + 0.16);
+  },
+  click() {
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.frequency.value = 600;
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain).connect(this.sfx);
+    osc.start(t); osc.stop(t + 0.06);
+  },
+  _noise(dur) {
+    const sampleRate = this.ctx.sampleRate;
+    const length = Math.ceil(sampleRate * dur);
+    const buffer = this.ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    return src;
+  },
+};
+
+/* ---- WEATHER (screen-space particles per map) ---- */
+const Weather = {
+  particles: [],
+  init() {
+    this.particles = [];
+    const kind = S.mapSpec ? S.mapSpec.weather : null;
+    if (!kind) return;
+    const count = kind === 'snow' ? 80 : kind === 'dust' ? 60 : kind === 'ash' ? 45 : 35;
+    for (let i = 0; i < count; i++) this.particles.push(this._spawn(kind, true));
+  },
+  _spawn(kind, initial = false) {
+    const w = window.innerWidth, h = window.innerHeight;
+    if (kind === 'snow') {
+      return {
+        kind, x: Math.random() * w,
+        y: initial ? Math.random() * h : -10,
+        vx: rand(-15, 15), vy: rand(35, 75),
+        r: rand(1, 2.4), a: rand(0.5, 0.9),
+      };
+    } else if (kind === 'dust') {
+      return {
+        kind, x: initial ? Math.random() * w : -10,
+        y: Math.random() * h,
+        vx: rand(80, 180), vy: rand(-10, 15),
+        r: rand(0.7, 1.6), a: rand(0.2, 0.5),
+      };
+    } else if (kind === 'ash') {
+      return {
+        kind, x: Math.random() * w,
+        y: initial ? Math.random() * h : -10,
+        vx: rand(-25, 10), vy: rand(12, 30),
+        r: rand(0.8, 2), a: rand(0.25, 0.55),
+        sway: Math.random() * TAU,
+      };
+    } else if (kind === 'leaves') {
+      return {
+        kind, x: Math.random() * w,
+        y: initial ? Math.random() * h : -10,
+        vx: rand(-20, 20), vy: rand(15, 40),
+        r: rand(1, 2.2), a: rand(0.3, 0.6),
+        sway: Math.random() * TAU,
+      };
+    }
+  },
+  update(dt) {
+    const w = window.innerWidth, h = window.innerHeight;
+    for (const p of this.particles) {
+      if (p.kind === 'leaves' || p.kind === 'ash') {
+        p.sway += dt * 2;
+        p.x += (p.vx + Math.sin(p.sway) * 20) * dt;
+      } else {
+        p.x += p.vx * dt;
+      }
+      p.y += p.vy * dt;
+      // Respawn offscreen particles
+      if (p.y > h + 10 || p.x < -10 || p.x > w + 10) {
+        Object.assign(p, this._spawn(p.kind, false));
+      }
+    }
+  },
+  render(ctx) {
+    if (!this.particles.length) return;
+    for (const p of this.particles) {
+      if (p.kind === 'snow') {
+        ctx.fillStyle = `rgba(240, 248, 252, ${p.a})`;
+      } else if (p.kind === 'dust') {
+        ctx.fillStyle = `rgba(200, 180, 140, ${p.a})`;
+      } else if (p.kind === 'ash') {
+        ctx.fillStyle = `rgba(190, 190, 195, ${p.a})`;
+      } else {
+        ctx.fillStyle = `rgba(140, 110, 60, ${p.a})`;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, TAU);
+      ctx.fill();
+    }
+  },
+};
+
+/* ---- GYRO (device-tilt turret aim + zoom) ---- */
+const Gyro = {
+  enabled: false,
+  available: typeof DeviceOrientationEvent !== 'undefined',
+  neutralBeta: null,
+  neutralGamma: null,
+  dBeta: 0, dGamma: 0,
+  // Base values captured when enabled
+  baseTurret: 0,
+  baseZoom: 1,
+  baseElev: 0,
+  // Sensitivities
+  turretSens: 0.055,  // rad per degree of gamma tilt (~3.1x)
+  elevSens: 0.035,    // elevation (0..1) per degree of beta tilt — tilt back = lob farther
+  _bound: null,
+  async requestEnable() {
+    if (!this.available) return false;
+    // iOS 13+ permission flow
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm !== 'granted') return false;
+      } catch (e) { return false; }
+    }
+    this._bound = this._onEvent.bind(this);
+    window.addEventListener('deviceorientation', this._bound);
+    this.enabled = true;
+    this.neutralBeta = null;
+    this.neutralGamma = null;
+    if (S.player) { this.baseTurret = S.player.turretAngle; this.baseElev = S.player.elevation; }
+    this.baseZoom = S.zoom;
+    return true;
+  },
+  disable() {
+    if (this._bound) window.removeEventListener('deviceorientation', this._bound);
+    this._bound = null;
+    this.enabled = false;
+    this.neutralBeta = null;
+    this.neutralGamma = null;
+  },
+  recalibrate() {
+    this.neutralBeta = null;
+    this.neutralGamma = null;
+    if (S.player) { this.baseTurret = S.player.turretAngle; this.baseElev = S.player.elevation; }
+    this.baseZoom = S.zoom;
+  },
+  _onEvent(e) {
+    if (!this.enabled) return;
+    const beta  = (e.beta  == null) ? 0 : e.beta;
+    const gamma = (e.gamma == null) ? 0 : e.gamma;
+    if (this.neutralBeta === null) {
+      this.neutralBeta = beta;
+      this.neutralGamma = gamma;
+    }
+    this.dBeta  = beta  - this.neutralBeta;
+    this.dGamma = gamma - this.neutralGamma;
+  },
+  applyToPlayer(dt) {
+    if (!this.enabled || !S.player) return;
+    // Turret: gamma delta = rotation around tank
+    const turretOffset = this.dGamma * this.turretSens;
+    S.player.turretTarget = this.baseTurret + turretOffset;
+    // Elevation: tilt the device back to raise the gun (lob farther), forward to lower it
+    const e = clamp(this.baseElev + this.dBeta * this.elevSens, 0, 1);
+    S.player.elevation = e < 0.06 ? 0 : e;
+  },
+};
+
+/* ---- LINK (companion map over the artifact `room` capability) ----
+   Host (the device playing) publishes a compact battlefield snapshot as its
+   room presence ~8×/s. A companion device in "spy" mode reads the freshest
+   host presence it can see and renders the tactical map from it. Presence is
+   handed to newcomers automatically, so terrain travels with it and no
+   pairing code is needed — any device signed into this artifact can watch. */
+const Link = {
+  room: null,
+  tried: false,
+  spy: false,
+  connected: false,
+  hostPeers: 0,
+  lastPush: 0,
+  remote: null,      // latest snapshot from a host
+  remoteAt: 0,       // Date.now() when received
+  terrainKey: '',
+  _terrain: null,
+  async init() {
+    if (this.tried) return;
+    this.tried = true;
+    try {
+      if (!window.claude || typeof window.claude.use !== 'function') return;
+      const room = await window.claude.use('room');
+      if (!room) return;
+      this.room = room;
+      room.onConnection(c => { this.connected = c; });
+      room.onPeers(ch => this._scan(ch.peers));
+    } catch (e) { this.room = null; }
+  },
+  _scan(peers) {
+    let best = null, bestAt = 0, hosts = 0;
+    for (const pr of peers) {
+      if (pr.sameTab) continue;
+      const tc = pr.presence && pr.presence.tc;
+      if (!tc || typeof tc !== 'object') continue;
+      hosts++;
+      if (pr.updatedAt >= bestAt) { bestAt = pr.updatedAt; best = tc; }
+    }
+    this.hostPeers = hosts;
+    if (best) { this.remote = best; this.remoteAt = Date.now(); }
+  },
+  // Host side: build and publish the snapshot
+  _terrainPacket() {
+    const key = S.selectedMap + ':' + S.startTime;
+    if (this.terrainKey === key && this._terrain) return this._terrain;
+    const r = n => Math.round(n);
+    this._terrain = {
+      map: S.selectedMap,
+      ob: S.obstacles.map(o => [r(o.x), r(o.y), r(o.r), o.kind === 'building' ? 2 : (o.kind === 'rock' ? 1 : 0)]),
+      hi: S.hills.map(o => [r(o.x), r(o.y), r(o.r)]),
+      pi: S.pits.map(o => [r(o.x), r(o.y), r(o.r)]),
+      ic: S.ice.map(o => [r(o.x), r(o.y), r(o.r)]),
+    };
+    this.terrainKey = key;
+    return this._terrain;
+  },
+  push(nowMs) {
+    if (!this.room || this.spy || S.mode !== 'play' || !S.player) return;
+    if (nowMs - this.lastPush < 120) return;
+    this.lastPush = nowMs;
+    const r = n => Math.round(n);
+    const tanks = S.tanks.map(t => [
+      r(t.x), r(t.y), Math.round(t.hullAngle * 100) / 100, Math.round(t.turretAngle * 100) / 100,
+      t.team === 'blue' ? 1 : 0, t.alive ? 1 : 0, t.isPlayer ? 1 : 0,
+      (t.team === 'red' && (S.playerSpotted.get(t.id) || 0) > S.time) ? 1 : 0,
+      r(100 * t.hp / t.maxHp),
+    ]);
+    const air = S.airdrops.map(a => [r(a.x), r(a.y), a.team === 'blue' ? 1 : 0]);
+    const smk = S.smokeScreens.map(sm => [r(sm.x), r(sm.y)]);
+    const snap = { v: 1, t: Date.now(), tanks, air, smk, sb: S.scoreBlue, sr: S.scoreRed,
+      hp: r(S.player.hp), mhp: S.player.maxHp, ter: this._terrainPacket(), cover: S.playerInCover ? 1 : 0 };
+    this.room.presence({ tc: snap }).catch(() => {});
+  },
+  clearHost() {
+    if (this.room && !this.spy) this.room.presence({ tc: null }).catch(() => {});
+  },
+  // Spy side: load the remote snapshot into S so the map renderer can draw it
+  applyRemote() {
+    const rm = this.remote;
+    if (!rm || !rm.ter) return false;
+    const ter = rm.ter;
+    const tkey = ter.map + ':' + (ter.ob ? ter.ob.length : 0) + ':' + (ter.ob && ter.ob[0] ? ter.ob[0].join(',') : '');
+    if (this.terrainKey !== tkey) {
+      this.terrainKey = tkey;
+      S.mapSpec = MAPS[ter.map] || MAPS.FOREST;
+      S.selectedMap = ter.map;
+      S.obstacles = (ter.ob || []).map(a => ({ x: a[0], y: a[1], r: a[2], kind: a[3] === 2 ? 'building' : a[3] === 1 ? 'rock' : 'tree', h: 30, seed: 0.5 }));
+      S.hills = (ter.hi || []).map(a => ({ x: a[0], y: a[1], r: a[2], seed: 0.5 }));
+      S.pits  = (ter.pi || []).map(a => ({ x: a[0], y: a[1], r: a[2], seed: 0.5 }));
+      S.ice   = (ter.ic || []).map(a => ({ x: a[0], y: a[1], r: a[2], seed: 0.5 }));
+    }
+    S.time = 1e9; // spotted flags below use "expire in the future"
+    S.playerSpotted.clear();
+    S.tanks = (rm.tanks || []).map((a, i) => {
+      const id = 'r' + i;
+      if (a[7]) S.playerSpotted.set(id, 2e9);
+      return { x: a[0], y: a[1], hullAngle: a[2], turretAngle: a[3], team: a[4] ? 'blue' : 'red',
+        alive: !!a[5], isPlayer: !!a[6], id, hpFrac: (a[8] || 0) / 100 };
+    });
+    S.airdrops = (rm.air || []).map(a => ({ x: a[0], y: a[1], team: a[2] ? 'blue' : 'red' }));
+    S.smokeScreens = (rm.smk || []).map(a => ({ x: a[0], y: a[1] }));
+    S.scoreBlue = rm.sb || 0; S.scoreRed = rm.sr || 0;
+    S.player = S.tanks.find(t => t.isPlayer) || null;
+    S.playerInCover = !!rm.cover;
+    return true;
+  },
+  enterSpy() {
+    this.spy = true;
+    this.terrainKey = '';
+    this.remote = null; this.remoteAt = 0;
+    S.mode = 'spy';
+    S.view = 'map';
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('gameover').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.remove('visible');
+    document.getElementById('spyExitBtn').classList.add('visible');
+    try { localStorage.setItem('tc_role', 'map'); } catch (e) {}
+    this.init();
+  },
+  exitSpy() {
+    this.spy = false;
+    S.mode = 'menu';
+    S.tanks = []; S.player = null;
+    document.getElementById('spyExitBtn').classList.remove('visible');
+    document.getElementById('menu').classList.remove('hidden');
+    try { localStorage.removeItem('tc_role'); } catch (e) {}
+  },
+};
+
+/* ---- VOICE COMMANDS (Web Speech API; needs mic permission + a network connection on iOS) ---- */
+const Voice = {
+  available: typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+  rec: null,
+  on: false,
+  wanted: false,       // user has turned it on (persists while the game runs)
+  lastHeard: '',
+  lastAt: 0,
+  _restart: null,
+  commands: [
+    { re: /\b(fire|shoot|engage)\b/,              act: () => { if (S.player && S.player.alive) S.player.voiceFire = true; },  label: 'FIRE' },
+    { re: /\b(smoke|smokescreen)\b/,             act: () => S.player && S.player.requestSmoke(),   label: 'SMOKE' },
+    { re: /\b(medic|repair)\b/,                  act: () => S.player && S.player.requestMedic(),   label: 'MEDIC' },
+    { re: /\b(supply|supplies|resupply|ammo drop)\b/, act: () => S.player && S.player.requestAirdrop(), label: 'SUPPLY' },
+    { re: /\b(map)\b/,                           act: () => { S.view = S.view === 'tank' ? 'map' : 'tank'; }, label: 'MAP' },
+    { re: /\b(ap|armou?r piercing)\b/,           act: () => S.player && (S.player.selectedAmmo = 'AP'),  label: 'AP' },
+    { re: /\b(he|high explosive|explosive)\b/,   act: () => S.player && (S.player.selectedAmmo = 'HE'),  label: 'HE' },
+    { re: /\b(tracer|tracers)\b/,                act: () => S.player && (S.player.selectedAmmo = 'TRC'), label: 'TRACER' },
+    { re: /\b(sabot|sabo|sab[oa]t)\b/,           act: () => S.player && (S.player.selectedAmmo = 'SBT'), label: 'SABOT' },
+    { re: /\b(full speed|flank speed|full ahead)\b/, act: () => S.player && (S.player.voiceGear = 3), label: 'FULL SPEED' },
+    { re: /\b(forward|advance|ahead)\b/,         act: () => S.player && (S.player.voiceGear = 2), label: 'FORWARD' },
+    { re: /\b(slow|creep)\b/,                    act: () => S.player && (S.player.voiceGear = 1), label: 'SLOW' },
+    { re: /\b(reverse|back up|retreat)\b/,       act: () => S.player && (S.player.voiceGear = -1), label: 'REVERSE' },
+    { re: /\b(stop|halt|brake)\b/,               act: () => S.player && (S.player.voiceGear = 0), label: 'STOP' },
+    { re: /\b(lob|indirect|elevate)\b/,          act: () => S.player && (S.player.elevation = Math.max(0.4, S.player.elevation)), label: 'LOB' },
+    { re: /\b(direct|level|flat)\b/,             act: () => S.player && (S.player.elevation = 0), label: 'DIRECT' },
+  ],
+  start() {
+    if (!this.available || this.on) return this.on;
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const r = new SR();
+      r.continuous = true;
+      r.interimResults = true;
+      r.lang = 'en-US';
+      r.maxAlternatives = 1;
+      r.onresult = e => this._onResult(e);
+      r.onerror = e => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.wanted = false; this.stop(); showMessage('MIC PERMISSION DENIED', 2); }
+      };
+      r.onend = () => {
+        this.on = false;
+        // iOS stops recognition after a while — restart if still wanted
+        if (this.wanted && S.mode === 'play') {
+          clearTimeout(this._restart);
+          this._restart = setTimeout(() => { if (this.wanted && S.mode === 'play') this.start(); }, 250);
+        }
+      };
+      r.start();
+      this.rec = r; this.on = true; this.wanted = true;
+    } catch (e) { this.on = false; return false; }
+    return true;
+  },
+  stop() {
+    clearTimeout(this._restart);
+    if (this.rec) { try { this.rec.onend = null; this.rec.stop(); } catch (e) {} }
+    this.rec = null; this.on = false;
+  },
+  toggle() {
+    if (this.wanted) { this.wanted = false; this.stop(); return false; }
+    this.wanted = true;
+    return this.start();
+  },
+  _onResult(e) {
+    // Only act on the newest result; use interim text so "fire" lands fast
+    const res = e.results[e.results.length - 1];
+    if (!res || !res[0]) return;
+    const text = String(res[0].transcript || '').toLowerCase().trim();
+    if (!text) return;
+    // Act once per distinct phrase: track the tail we already handled for this result
+    const key = e.results.length + ':' + text;
+    if (key === this._handledKey) return;
+    const prev = (this._handledKey && this._handledKey.split(':')[0] === String(e.results.length)) ? this._handledKey.slice(this._handledKey.indexOf(':') + 1) : '';
+    const fresh = text.startsWith(prev) ? text.slice(prev.length) : text;
+    this._handledKey = key;
+    this.handle(fresh);
+  },
+  handle(text) {
+    if (!S.player || S.mode !== 'play') return;
+    const t = text.toLowerCase();
+    const hits = [];
+    this._cool = this._cool || {};
+    for (const c of this.commands) {
+      if (!c.re.test(t)) continue;
+      // Interim transcripts get revised; never repeat the same command within 0.8s
+      if (S.time - (this._cool[c.label] || -9) < 0.8) continue;
+      this._cool[c.label] = S.time;
+      c.act(); hits.push(c.label);
+    }
+    if (hits.length) {
+      this.lastHeard = hits.join(' · ');
+      this.lastAt = S.time;
+      Sound.click();
+    }
+  },
+};
+
+const COLORS = {
+  bg: '#1a1e18',
+  bgDark: '#141712',
+  grid: '#242922',
+  blue: '#5a9ad4',
+  red: '#d46a5a',
+  blueBase: 'rgba(90, 154, 212, 0.08)',
+  blueBaseEdge: 'rgba(90, 154, 212, 0.4)',
+  redBase: 'rgba(212, 106, 90, 0.08)',
+  redBaseEdge: 'rgba(212, 106, 90, 0.4)',
+  obstacle: '#3a3630',
+  obstacleEdge: '#4a4640',
+  hudBg: 'rgba(13, 14, 12, 0.75)',
+  hudBorder: '#2a2e26',
+  accent: '#c9a85a',
+  warn: '#d46a5a',
+  ok: '#6ba35a',
+  text: '#d6d2c3',
+  textDim: '#6b7266',
+};
+
+/* ============== STATE ============== */
+
+const S = {
+  mode: 'menu',     // menu | play | over
+  view: 'tank',     // tank (driver view) | map
+  zoom: 0.65,
+  minZoom: 0.35, maxZoom: 1.8,
+  cam: { x: WORLD_W/2, y: WORLD_H/2, angle: 0 },
+  player: null,
+  tanks: [],
+  bullets: [],
+  effects: [],
+  obstacles: [],
+  pits: [],
+  hills: [],
+  ice: [],
+  airdrops: [],
+  smokeScreens: [],
+  medicCooldown: 0,
+  smokeCooldown: 0,
+  playerInCover: false,
+  message: '',
+  messageUntil: 0,
+  playerKills: 0,
+  playerDeaths: 0,
+  scoreBlue: 0,
+  scoreRed: 0,
+  winScore: 15,
+  startTime: 0,
+  selectedType: 'MEDIUM',
+  selectedMap: 'FOREST',
+  mapSpec: null,
+  playerSpotted: new Map(), // enemy id -> expireTime (reveal duration)
+  luminous: [],     // active tracer illumination zones
+  dt: 0,
+  time: 0,
+  airdropCooldown: 0,
+};
+
+/* ============== UTIL ============== */
+
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+function dist(a, b) { const dx = a.x - b.x, dy = a.y - b.y; return Math.hypot(dx, dy); }
+function dist2(x1, y1, x2, y2) { const dx = x2-x1, dy = y2-y1; return dx*dx + dy*dy; }
+function angleDiff(a, b) {
+  let d = (b - a) % TAU;
+  if (d > Math.PI) d -= TAU;
+  if (d < -Math.PI) d += TAU;
+  return d;
+}
+function normAngle(a) { a = a % TAU; return a < 0 ? a + TAU : a; }
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ============== CLASSES ============== */
+
+class Tank {
+  constructor(x, y, type, team, isPlayer=false) {
+    this.x = x; this.y = y;
+    this.spec = TANK_TYPES[type];
+    this.typeKey = type;
+    this.team = team;
+    this.isPlayer = isPlayer;
+    this.hullAngle = team === 'blue' ? 0 : Math.PI;
+    this.turretAngle = this.hullAngle;
+    this.speed = 0;
+    this.targetGear = 0;      // -1 reverse, 0 stop, 1-3 forward
+    this.steer = 0;
+    this.turretTarget = this.hullAngle;
+    this.hp = this.spec.hp;
+    this.maxHp = this.spec.hp;
+    this.ammo = { ...AMMO_LOADOUT };
+    this.selectedAmmo = 'AP';
+    this.reloadTimer = 0;
+    this.firing = false;
+    this.firePressed = false;    // edge trigger for keyboard
+    this.recoil = 0;
+    this.elevation = 0;          // 0 = direct fire, 0..1 = lob distance (player only)
+    // Upgrades apply to player only (AI stays balanced)
+    this.armorMult   = isPlayer ? (1 + Progression.armor  * ARMOR_PER_LEVEL)  : 1;
+    this.reloadMult  = isPlayer ? (1 - Progression.reload * RELOAD_PER_LEVEL) : 1;
+    this.turretMult  = isPlayer ? (1 + Progression.turret * TURRET_PER_LEVEL) : 1;
+    // Velocity direction (separate from hullAngle to allow sliding on ice)
+    this.velAngle = this.hullAngle;
+    this.radius = Math.max(this.spec.size.w, this.spec.size.h) / 2 - 2;
+    this.alive = true;
+    this.respawnTimer = 0;
+    this.lastHit = 0;
+    this.target = null;
+    this.aiState = 'patrol';
+    this.aiTimer = 0;
+    this.aiTarget = null;
+    this.aiPatrolTarget = null;
+    this.smokeTimer = 0;
+    this.id = Math.random().toString(36).slice(2, 8);
+    this.kills = 0;
+    this.name = isPlayer ? 'YOU' : ((team === 'blue' ? 'BLU-' : 'RED-') + randInt(10, 99));
+    this.repairTick = 0;
+    this.airdropTimer = 0;
+    this.medicTimer = 0;
+    this.lastShotTime = 0;
+    this.treads = [];       // trail of {x, y, angle, life}
+    this.lastTreadT = 0;
+  }
+
+  update(dt, t) {
+    if (!this.alive) {
+      this.respawnTimer -= dt;
+      if (this.respawnTimer <= 0) this.respawn();
+      return;
+    }
+
+    // Target speed from gear
+    const sp = this.spec;
+    const target =
+      this.targetGear < 0 ? sp.reverse :
+      this.targetGear === 0 ? 0 :
+      sp.gears[this.targetGear] || 0;
+
+    // Check if tank is on ice (reduces traction)
+    let onIce = false;
+    for (const p of S.ice) {
+      if (dist2(this.x, this.y, p.x, p.y) < p.r * p.r) { onIce = true; break; }
+    }
+    const tractionDecel = onIce ? 0.35 : 1;    // slides longer on ice
+    const tractionTurn  = onIce ? 0.45 : 1;    // less steering authority
+
+    if (this.speed < target) this.speed = Math.min(target, this.speed + sp.accel * dt * tractionDecel);
+    else if (this.speed > target) this.speed = Math.max(target, this.speed - sp.decel * dt * tractionDecel);
+
+    // Steering - at low speed, allow near-full-rate pivot (differential track drive)
+    // At high speed, mild boost for responsive turns.
+    const spd = Math.abs(this.speed);
+    let spf;
+    if (this.targetGear === 0 && Math.abs(this.steer) > 0.1) {
+      // Pivot-in-place: full steering authority when idling and steering
+      spf = 0.95;
+    } else {
+      spf = clamp(spd / 25 + 0.55, 0.55, 1.1);
+    }
+    const dir = this.speed >= 0 ? 1 : -1;
+    this.hullAngle = normAngle(this.hullAngle + this.steer * sp.turnRate * dt * spf * dir * tractionTurn);
+
+    // Recoil applies a brief impulse opposite to turret
+    let recX = 0, recY = 0;
+    if (this.recoil > 0) {
+      recX = -Math.cos(this.turretAngle) * this.recoil * 120;
+      recY = -Math.sin(this.turretAngle) * this.recoil * 120;
+      this.recoil *= Math.pow(0.0001, dt);
+      if (this.recoil < 0.01) this.recoil = 0;
+    }
+
+    // Velocity direction tracks hull on normal ground; lags on ice (slides)
+    if (onIce) {
+      const d = angleDiff(this.velAngle, this.hullAngle);
+      // Catch up slowly — rate inversely proportional to speed (more momentum = more drift)
+      const catchRate = 0.8 / Math.max(1, Math.abs(this.speed) / 40);
+      this.velAngle = normAngle(this.velAngle + clamp(d, -catchRate * dt, catchRate * dt));
+    } else {
+      this.velAngle = this.hullAngle;
+    }
+
+    // Move along velAngle (sliding), with recoil impulse
+    const vx = Math.cos(this.velAngle) * this.speed + recX;
+    const vy = Math.sin(this.velAngle) * this.speed + recY;
+    this.x += vx * dt;
+    this.y += vy * dt;
+
+    // Clamp to world
+    this.x = clamp(this.x, this.radius + 2, WORLD_W - this.radius - 2);
+    this.y = clamp(this.y, this.radius + 2, WORLD_H - this.radius - 2);
+
+    // Collide with obstacles
+    for (const ob of S.obstacles) {
+      const d = dist(this, ob);
+      const minD = this.radius + ob.r;
+      if (d < minD) {
+        const push = minD - d + 0.5;
+        const ang = Math.atan2(this.y - ob.y, this.x - ob.x);
+        this.x += Math.cos(ang) * push;
+        this.y += Math.sin(ang) * push;
+        this.speed *= 0.55;
+      }
+    }
+
+    // Collide with other tanks
+    for (const t2 of S.tanks) {
+      if (t2 === this || !t2.alive) continue;
+      const d = dist(this, t2);
+      const minD = this.radius + t2.radius;
+      if (d < minD) {
+        const push = (minD - d) / 2;
+        const ang = Math.atan2(this.y - t2.y, this.x - t2.x);
+        this.x += Math.cos(ang) * push;
+        this.y += Math.sin(ang) * push;
+        t2.x -= Math.cos(ang) * push;
+        t2.y -= Math.sin(ang) * push;
+        this.speed *= 0.6;
+      }
+    }
+
+    // Turret rotation toward target angle (upgraded rate for player)
+    const td = angleDiff(this.turretAngle, this.turretTarget);
+    const turretRate = 2.6 * this.turretMult;
+    const maxTurn = turretRate * dt;
+    this.turretAngle = normAngle(this.turretAngle + clamp(td, -maxTurn, maxTurn));
+
+    // Reload (player hears the round seat when the timer runs out)
+    if (this.reloadTimer > 0) {
+      this.reloadTimer -= dt;
+      if (this.reloadTimer <= 0 && this.isPlayer) Sound.ready();
+    }
+
+    // Firing (continuous when held or AI commanded)
+    if (this.firing && this.reloadTimer <= 0 && this.ammo[this.selectedAmmo] > 0) {
+      this.fire(t);
+      if (this.isPlayer) {
+        // for mouse/touch continuous fire; auto re-fire when ready
+      }
+    }
+
+    // Base healing / rearming
+    const myBase = this.team === 'blue' ? BLUE_BASE : RED_BASE;
+    if (dist(this, myBase) < myBase.r) {
+      this.repairTick += dt;
+      if (this.repairTick > 0.25) {
+        this.repairTick = 0;
+        if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 6);
+        // Round-robin refill
+        for (const k of AMMO_ORDER) {
+          if (this.ammo[k] < AMMO_LOADOUT[k]) {
+            this.ammo[k] = Math.min(AMMO_LOADOUT[k], this.ammo[k] + 1);
+            break;
+          }
+        }
+      }
+    } else {
+      this.repairTick = 0;
+    }
+
+    // Pending airdrop
+    if (this.airdropTimer > 0) {
+      this.airdropTimer -= dt;
+      if (this.airdropTimer <= 0) {
+        S.airdrops.push(new Airdrop(this.x + rand(-80, 80), this.y + rand(-80, 80), this.team));
+        if (this.isPlayer) showMessage('AIRDROP INBOUND', 2);
+      }
+    }
+
+    // Visible-damage smoke
+    if (this.hp < this.maxHp * 0.4) {
+      this.smokeTimer -= dt;
+      if (this.smokeTimer <= 0) {
+        this.smokeTimer = 0.08 + Math.random() * 0.1;
+        S.effects.push(new Smoke(this.x + rand(-12, 12), this.y + rand(-12, 12)));
+      }
+    }
+
+    // Tread marks (persistent trail on ground)
+    if (Math.abs(this.speed) > 8) {
+      this.lastTreadT += dt;
+      if (this.lastTreadT > 0.09) {
+        this.lastTreadT = 0;
+        this.treads.push({ x: this.x, y: this.y, angle: this.hullAngle, life: 7 });
+        if (this.treads.length > 60) this.treads.shift();
+      }
+    }
+    for (const tr of this.treads) tr.life -= dt;
+    this.treads = this.treads.filter(tr => tr.life > 0);
+
+    if (this.lastHit > 0) this.lastHit = Math.max(0, this.lastHit - dt * 3);
+
+    // Pending medic drop (separate from supply)
+    if (this.medicTimer > 0) {
+      this.medicTimer -= dt;
+      if (this.medicTimer <= 0) {
+        S.airdrops.push(new Airdrop(this.x + rand(-80, 80), this.y + rand(-80, 80), this.team, 'medic'));
+        if (this.isPlayer) showMessage('MEDIC INBOUND', 2);
+      }
+    }
+  }
+
+  fire(t) {
+    const kind = this.selectedAmmo;
+    if (this.ammo[kind] <= 0) {
+      for (const k of AMMO_ORDER) {
+        if (this.ammo[k] > 0) { this.selectedAmmo = k; return; }
+      }
+      return;
+    }
+    const ammoSpec = AMMO[kind];
+    this.ammo[kind]--;
+    const ammoFactor = kind === 'HE' ? 1.05 : kind === 'SBT' ? 1.1 : 1;
+    this.reloadTimer = this.spec.reloadBase * ammoFactor * this.reloadMult;
+    this.lastShotTime = t;
+
+    // Muzzle at end of barrel
+    const mx = this.x + Math.cos(this.turretAngle) * this.spec.barrelLen;
+    const my = this.y + Math.sin(this.turretAngle) * this.spec.barrelLen;
+
+    const vx = Math.cos(this.turretAngle) * ammoSpec.v;
+    const vy = Math.sin(this.turretAngle) * ammoSpec.v;
+    const shell = new Bullet(mx, my, vx, vy, kind, this);
+    if (this.elevation > 0.02) shell.setArc(arcLandDist(this.elevation, ammoSpec) - this.spec.barrelLen);
+    S.bullets.push(shell);
+
+    // Recoil impulse (strength scales with gun power + ammo)
+    this.recoil = Math.min(1.2, (ammoSpec.dmg / 100) * this.spec.gunPower * 0.7);
+
+    // Muzzle flash
+    S.effects.push(new MuzzleFlash(mx, my, this.turretAngle, this.spec.gunPower));
+
+    // Fire sound + breech clank as the carriage settles
+    Sound.fire({ x: mx, y: my }, this.spec.gunPower);
+    Sound.breech({ x: this.x, y: this.y }, this.spec.gunPower);
+  }
+
+  takeDamage(bullet, hx, hy) {
+    // Which armor face?
+    const toImpact = Math.atan2(hy - this.y, hx - this.x);
+    const rel = angleDiff(this.hullAngle, toImpact);
+    const absRel = Math.abs(rel);
+    let armor;
+    if (absRel < Math.PI / 3) armor = this.spec.armor.front;
+    else if (absRel < 2 * Math.PI / 3) armor = this.spec.armor.side;
+    else armor = this.spec.armor.rear;
+    // Apply armor upgrade multiplier
+    armor *= this.armorMult;
+
+    // Impact angle: between bullet velocity and inward surface normal
+    const bulletA = Math.atan2(bullet.vy, bullet.vx);
+    const inwardNormal = Math.atan2(this.y - hy, this.x - hx);
+    const impactAngle = Math.abs(angleDiff(bulletA, inwardNormal));
+    const effArmor = armor / Math.max(0.18, Math.cos(impactAngle));
+
+    this.lastHit = 1.0;
+
+    // Ricochet (except HE which detonates on contact)
+    if (bullet.type !== 'HE' && impactAngle > RICOCHET_ANGLE) {
+      S.effects.push(new Spark(hx, hy, true));
+      Sound.ricochet({ x: hx, y: hy });
+      bullet.ricochet(hx, hy, inwardNormal);
+      return false;
+    }
+
+    // bullet.pen and bullet.dmg already include ammo upgrade multipliers
+    if (bullet.pen >= effArmor || bullet.type === 'HE') {
+      this.hp -= bullet.dmg;
+      S.effects.push(new Spark(hx, hy, false));
+      Sound.impact({ x: hx, y: hy }, true);
+      // Mark enemy as spotted
+      if (bullet.owner && bullet.owner.team !== this.team) {
+        S.playerSpotted.set(this.id, S.time + 3.5);
+      }
+      if (this.hp <= 0) this.kill(bullet.owner);
+      return true;
+    } else {
+      // Non-pen shrapnel/sparks
+      S.effects.push(new Spark(hx, hy, true));
+      Sound.impact({ x: hx, y: hy }, false);
+      return true;
+    }
+  }
+
+  kill(killer) {
+    this.alive = false;
+    this.respawnTimer = this.isPlayer ? 4.0 : rand(5, 10);
+    S.effects.push(new Explosion(this.x, this.y, 90, '#ff8833'));
+    Sound.explosion({ x: this.x, y: this.y }, true);
+    if (killer && killer !== this && killer.team !== this.team) {
+      killer.kills++;
+      if (killer.team === 'blue') S.scoreBlue++;
+      else S.scoreRed++;
+      if (killer.isPlayer) {
+        S.playerKills++;
+        showMessage('ENEMY DESTROYED', 1.5);
+      }
+    }
+    if (this.isPlayer) {
+      S.playerDeaths++;
+      showMessage('DESTROYED — RESPAWNING…', 2.5);
+    }
+    checkWinCondition();
+  }
+
+  respawn() {
+    const base = this.team === 'blue' ? BLUE_BASE : RED_BASE;
+    this.x = base.x + rand(-100, 100);
+    this.y = base.y + rand(-100, 100);
+    this.hp = this.maxHp;
+    this.ammo = { ...AMMO_LOADOUT };
+    this.speed = 0;
+    this.targetGear = 0;
+    this.steer = 0;
+    this.alive = true;
+    this.hullAngle = this.team === 'blue' ? 0 : Math.PI;
+    this.turretAngle = this.hullAngle;
+    this.turretTarget = this.turretAngle;
+    this.velAngle = this.hullAngle;
+    this.reloadTimer = 0;
+    this.recoil = 0;
+    if (this.isPlayer) {
+      showMessage('REDEPLOYED', 1.5);
+      if (Gyro.enabled) Gyro.recalibrate();
+    }
+  }
+
+  requestAirdrop() {
+    if (this.airdropTimer > 0 || S.airdropCooldown > 0) {
+      if (this.isPlayer) showMessage('SUPPLY ON COOLDOWN', 1.5);
+      return;
+    }
+    this.airdropTimer = 6;
+    S.airdropCooldown = 30;
+    if (this.isPlayer) { showMessage('AIRDROP REQUESTED', 2); Sound.click(); }
+  }
+
+  requestMedic() {
+    if (this.medicTimer > 0 || S.medicCooldown > 0) {
+      if (this.isPlayer) showMessage('MEDIC ON COOLDOWN', 1.5);
+      return;
+    }
+    this.medicTimer = 5;
+    S.medicCooldown = 45;
+    if (this.isPlayer) { showMessage('MEDIC REQUESTED', 2); Sound.click(); }
+  }
+
+  requestSmoke() {
+    if (S.smokeCooldown > 0) {
+      if (this.isPlayer) showMessage('SMOKE ON COOLDOWN', 1.5);
+      return;
+    }
+    S.smokeCooldown = 25;
+    // Deploy 3 overlapping smoke clouds behind the tank's facing
+    for (let i = 0; i < 3; i++) {
+      const off = (i - 1) * 70;
+      const perp = this.hullAngle + Math.PI / 2;
+      const sx = this.x - Math.cos(this.hullAngle) * 40 + Math.cos(perp) * off;
+      const sy = this.y - Math.sin(this.hullAngle) * 40 + Math.sin(perp) * off;
+      S.smokeScreens.push(new SmokeScreen(sx, sy, this.team));
+    }
+    if (this.isPlayer) { showMessage('SMOKE DEPLOYED', 1.5); Sound.click(); }
+  }
+
+  totalAmmo() {
+    let n = 0;
+    for (const k of AMMO_ORDER) n += this.ammo[k];
+    return n;
+  }
+}
+
+class Bullet {
+  constructor(x, y, vx, vy, type, owner) {
+    this.x = x; this.y = y;
+    this.vx = vx; this.vy = vy;
+    this.type = type;
+    this.owner = owner;
+    this.team = owner.team;
+    this.spec = AMMO[type];
+    this.life = this.spec.range / Math.hypot(vx, vy);
+    this.trail = [];
+    this.dead = false;
+    this.ricochets = 0;
+    this.arc = null;   // {T, h} when lobbed
+    this.t = 0;        // flight time
+    this.z = 0;        // altitude
+    // Ammo upgrade applies to player only
+    const upLvl = owner.isPlayer ? (Progression.ammo[type] || 0) : 0;
+    const mult = 1 + upLvl * AMMO_PER_LEVEL;
+    this.dmg = this.spec.dmg * mult;
+    this.pen = this.spec.pen * mult;
+    this.splashDmg = (this.spec.splashDmg || 0) * mult;
+  }
+  setArc(landDist) {
+    const spd = Math.hypot(this.vx, this.vy);
+    landDist = Math.max(60, landDist);
+    this.arc = { T: landDist / spd, h: landDist * ARC_APEX_RATIO, dist: landDist };
+    this.life = this.arc.T;
+  }
+  groundImpact() {
+    // Lobbed shell reaches the ground without hitting a tank
+    if (this.type === 'HE') {
+      S.effects.push(new Explosion(this.x, this.y, this.spec.splashR, '#ff6600'));
+      Sound.explosion({ x: this.x, y: this.y }, false);
+      const R = this.spec.splashR * ARC_HE_GROUND_SPLASH;
+      for (const other of S.tanks) {
+        if (!other.alive) continue;
+        const dd = dist(other, this);
+        if (dd < R) {
+          const falloff = 1 - dd / R;
+          other.hp -= this.splashDmg * falloff * 0.7;
+          other.lastHit = 0.5;
+          if (other.team !== this.team) S.playerSpotted.set(other.id, S.time + 3);
+          if (other.hp <= 0) other.kill(this.owner);
+        }
+      }
+    } else {
+      S.effects.push(new Spark(this.x, this.y, true));
+      S.effects.push(new Smoke(this.x, this.y));
+      Sound.impact({ x: this.x, y: this.y }, false);
+    }
+    this.dead = true;
+  }
+  update(dt) {
+    if (this.dead) return;
+    this.life -= dt;
+    this.t += dt;
+    if (this.arc) {
+      const f = clamp(this.t / this.arc.T, 0, 1);
+      this.z = 4 * this.arc.h * f * (1 - f);
+    }
+    if (this.life <= 0) {
+      if (this.arc) { this.z = 0; this.groundImpact(); }
+      this.dead = true; return;
+    }
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > this.spec.trailLen) this.trail.shift();
+
+    // Illumination
+    if (this.spec.luminous) {
+      // Just add to global luminous positions each tick
+      S.luminous.push({ x: this.x, y: this.y, r: this.spec.luminousR, life: 0.1 });
+    }
+
+    // Sub-step for fast bullets to avoid tunneling
+    const steps = 5;
+    const sdt = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      this.x += this.vx * sdt;
+      this.y += this.vy * sdt;
+      // Hit tanks (lobbed shells only strike when they are low enough)
+      if (this.z <= ARC_HIT_ALT) for (const t of S.tanks) {
+        if (!t.alive || t === this.owner) continue;
+        if (dist2(this.x, this.y, t.x, t.y) < t.radius * t.radius) {
+          const consumed = t.takeDamage(this, this.x, this.y);
+          if (consumed) {
+            // HE splash
+            if (this.type === 'HE') {
+              S.effects.push(new Explosion(this.x, this.y, this.spec.splashR, '#ff6600'));
+              Sound.explosion({ x: this.x, y: this.y }, false);
+              for (const other of S.tanks) {
+                if (!other.alive || other === t) continue;
+                const dd = dist(other, this);
+                if (dd < this.spec.splashR) {
+                  const falloff = 1 - dd / this.spec.splashR;
+                  const splashHp = this.splashDmg * falloff * 0.55;
+                  other.hp -= splashHp;
+                  other.lastHit = 0.5;
+                  if (other.hp <= 0) other.kill(this.owner);
+                }
+              }
+            }
+            this.dead = true;
+            return;
+          }
+        }
+      }
+      // Hit obstacles (shells fly over anything lower than their altitude)
+      for (const ob of S.obstacles) {
+        if (this.z > ob.h) continue;
+        if (dist2(this.x, this.y, ob.x, ob.y) < ob.r * ob.r) {
+          if (this.type === 'HE') {
+            S.effects.push(new Explosion(this.x, this.y, this.spec.splashR, '#ff6600'));
+          } else {
+            S.effects.push(new Spark(this.x, this.y, true));
+          }
+          this.dead = true;
+          return;
+        }
+      }
+      // World bounds
+      if (this.x < 0 || this.x > WORLD_W || this.y < 0 || this.y > WORLD_H) {
+        this.dead = true;
+        return;
+      }
+    }
+  }
+  ricochet(hx, hy, nAng) {
+    this.x = hx + Math.cos(nAng) * -8;
+    this.y = hy + Math.sin(nAng) * -8;
+    const nx = Math.cos(nAng), ny = Math.sin(nAng);
+    const dot = this.vx * nx + this.vy * ny;
+    this.vx = this.vx - 2 * dot * nx;
+    this.vy = this.vy - 2 * dot * ny;
+    this.vx *= 0.6; this.vy *= 0.6;
+    this.ricochets++;
+    this.life = Math.min(this.life, 0.5);
+    if (this.ricochets > 1) this.dead = true;
+  }
+}
+
+class Obstacle {
+  constructor(x, y, r, kind = 'rock') {
+    this.x = x; this.y = y; this.r = r;
+    this.kind = kind; // 'rock' | 'tree' | 'snowtree' | 'building'
+    // Visual variance (set once, used while drawing)
+    this.seed = Math.random();
+    // Height (world units) — arcing shells pass over anything lower than their altitude
+    this.h = kind === 'rock' ? 22 : 36;
+  }
+}
+
+class Pit {
+  constructor(x, y, r) {
+    this.x = x; this.y = y; this.r = r;
+    // "Hiding" pits — tanks inside have reduced effective spot range
+    this.seed = Math.random();
+  }
+}
+
+class Hill {
+  constructor(x, y, r) {
+    this.x = x; this.y = y; this.r = r;
+    // Elevation — blocks LOS unless observer or target is ON the hill.
+    // Does NOT block tank movement or bullets.
+    this.seed = Math.random();
+  }
+}
+
+class IcePatch {
+  constructor(x, y, r) {
+    this.x = x; this.y = y; this.r = r;
+    // Slippery terrain — reduces traction + steering.
+    this.seed = Math.random();
+  }
+}
+
+class Airdrop {
+  constructor(x, y, team, kind = 'supply') {
+    this.x = x; this.y = y; this.team = team;
+    this.kind = kind; // 'supply' | 'medic'
+    this.z = 400; this.landed = false; this.life = 25;
+    this.pickedUp = false;
+  }
+  update(dt) {
+    if (!this.landed) {
+      this.z -= 160 * dt;
+      if (this.z <= 0) {
+        this.z = 0; this.landed = true;
+        S.effects.push(new Spark(this.x, this.y, false));
+      }
+      return;
+    }
+    for (const t of S.tanks) {
+      if (!t.alive || t.team !== this.team) continue;
+      if (dist(t, this) < 48) {
+        if (this.kind === 'medic') {
+          // Medic pack = full HP, no ammo
+          t.hp = t.maxHp;
+          if (t.isPlayer) { showMessage('MEDIC — FULL HP', 1.5); Sound.click(); }
+        } else {
+          // Supply = ammo + partial HP
+          for (const k of AMMO_ORDER) {
+            t.ammo[k] = Math.min(AMMO_LOADOUT[k], t.ammo[k] + Math.ceil(AMMO_LOADOUT[k] * 0.65));
+          }
+          t.hp = Math.min(t.maxHp, t.hp + 70);
+          if (t.isPlayer) { showMessage('SUPPLY ACQUIRED', 1.5); Sound.click(); }
+        }
+        this.pickedUp = true;
+        this.life = 0;
+        return;
+      }
+    }
+    this.life -= dt;
+  }
+  get dead() { return this.life <= 0; }
+}
+
+class SmokeScreen {
+  constructor(x, y, team) {
+    this.x = x; this.y = y;
+    this.team = team;
+    this.r = 20;         // starts small, expands
+    this.maxR = 170;
+    this.life = 8.5;
+    this.maxLife = 8.5;
+    this.seed = Math.random();
+  }
+  update(dt) {
+    this.life -= dt;
+    const age = 1 - this.life / this.maxLife;
+    // Expand quickly, then stay
+    this.r = this.maxR * clamp(age * 3, 0.1, 1);
+  }
+  get dead() { return this.life <= 0; }
+  // Effective LOS radius decays near end of life
+  losRadius() {
+    const t = this.life / this.maxLife;
+    if (t < 0.15) return this.r * (t / 0.15); // fade out
+    return this.r;
+  }
+}
+
+class Effect {
+  constructor() { this.life = 0; this.maxLife = 1; }
+  update(dt) { this.life += dt; }
+  get dead() { return this.life >= this.maxLife; }
+}
+
+class MuzzleFlash extends Effect {
+  constructor(x, y, a, s) { super(); this.x = x; this.y = y; this.a = a; this.s = s; this.maxLife = 0.14; }
+}
+
+class Spark extends Effect {
+  constructor(x, y, ricochet) {
+    super();
+    this.x = x; this.y = y;
+    this.ricochet = ricochet;
+    this.maxLife = ricochet ? 0.45 : 0.3;
+    this.particles = [];
+    const n = ricochet ? 10 : 6;
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU), s = rand(60, 180);
+      this.particles.push({ x: 0, y: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s });
+    }
+  }
+  update(dt) {
+    super.update(dt);
+    for (const p of this.particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.88; p.vy *= 0.88;
+    }
+  }
+}
+
+class Explosion extends Effect {
+  constructor(x, y, r, color) {
+    super();
+    this.x = x; this.y = y;
+    this.radius = r; this.color = color;
+    this.maxLife = 0.55;
+  }
+}
+
+class Smoke extends Effect {
+  constructor(x, y) {
+    super();
+    this.x = x; this.y = y;
+    this.vx = rand(-6, 6); this.vy = rand(-14, -4);
+    this.maxLife = 1.6;
+    this.radius = rand(6, 12);
+  }
+  update(dt) {
+    super.update(dt);
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.radius += 16 * dt;
+    this.vy *= 0.95;
+  }
+}
+
+/* ============== INPUT ============== */
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const Input = {
+  keys: {},
+  mouseX: 0, mouseY: 0,
+  mouseInWorld: { x: 0, y: 0 },
+  mouseDown: false,
+
+  joyL: { active: false, cx: 0, cy: 0, x: 0, y: 0, id: null, lastGearShift: 0 },
+  joyR: { active: false, cx: 0, cy: 0, x: 0, y: 0, id: null },
+  aimTouch: { active: false, x: 0, y: 0, id: null },
+  fireTouch: { active: false, id: null },
+  fireHeld: false,
+  elevTouch: { active: false, id: null },
+
+  buttons: [], // Rebuilt per frame: {x,y,r,action,label,id?}
+  touches: new Map(),
+};
+
+function setCanvasSize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+const JOY_RADIUS = 56;
+const FIRE_RADIUS = 44;
+const BTN_RADIUS = 24;
+
+function layoutUi() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const safeL = parseInt(getComputedStyle(document.documentElement).getPropertyValue('padding-left')) || 0;
+  const safeR = 0;
+  const safeB = 0;
+
+  // Left joystick anchor
+  Input.joyAnchorL = { x: 90, y: h - 100 };
+  // Fire button
+  Input.fireAnchor = { x: w - 72, y: h - 100, r: FIRE_RADIUS };
+  // Elevation slider (vertical strip above the fire button)
+  Input.elevSlider = { x: w - 72, top: h - 318, bottom: h - 168, w: 30 };
+
+  // Build button list
+  Input.buttons = [];
+  // Map toggle (top-right)
+  Input.buttons.push({ x: w - 36, y: 36, r: BTN_RADIUS, action: 'toggleMap', label: 'MAP' });
+  if (Voice.available) Input.buttons.push({ x: w - 92, y: 30, r: 18, action: 'voice', label: 'VOC' });
+  // Zoom buttons under it
+  Input.buttons.push({ x: w - 36, y: 96, r: BTN_RADIUS - 2, action: 'zoomIn', label: '+' });
+  Input.buttons.push({ x: w - 36, y: 148, r: BTN_RADIUS - 2, action: 'zoomOut', label: '−' });
+  // Gyro toggle + recalibrate
+  Input.buttons.push({ x: w - 36, y: 200, r: BTN_RADIUS - 2, action: 'gyro', label: 'TILT' });
+  Input.buttons.push({ x: w - 36, y: 248, r: BTN_RADIUS - 4, action: 'recal', label: '⟲' });
+  Input.buttons.push({ x: w - 36, y: 296, r: BTN_RADIUS - 4, action: 'mute', label: Sound.enabled ? 'SND' : 'MUTE' });
+  // Request stack (supply, medic, smoke)
+  Input.buttons.push({ x: 36, y: 36,  r: BTN_RADIUS, action: 'supply', label: 'SUP' });
+  Input.buttons.push({ x: 36, y: 96,  r: BTN_RADIUS - 2, action: 'medic', label: 'MED' });
+  Input.buttons.push({ x: 36, y: 148, r: BTN_RADIUS - 2, action: 'smoke', label: 'SMK' });
+  // Ammo switch icons across bottom-left area above joystick
+  const ammoBtnStart = Input.joyAnchorL.x - 48;
+  for (let i = 0; i < AMMO_ORDER.length; i++) {
+    Input.buttons.push({
+      x: ammoBtnStart + i * 44,
+      y: h - 210,
+      r: 18,
+      action: 'ammo',
+      ammo: AMMO_ORDER[i],
+      label: AMMO[AMMO_ORDER[i]].name,
+    });
+  }
+}
+
+function hitButton(x, y) {
+  for (const b of Input.buttons) {
+    const d = Math.hypot(x - b.x, y - b.y);
+    if (d < b.r + 6) return b;
+  }
+  return null;
+}
+
+function doButton(b) {
+  if (!b) return;
+  if (b.action === 'toggleMap') S.view = S.view === 'tank' ? 'map' : 'tank';
+  else if (b.action === 'zoomIn') S.zoom = clamp(S.zoom * 1.25, S.minZoom, S.maxZoom);
+  else if (b.action === 'zoomOut') S.zoom = clamp(S.zoom / 1.25, S.minZoom, S.maxZoom);
+  else if (b.action === 'supply') { if (S.player) S.player.requestAirdrop(); }
+  else if (b.action === 'medic')  { if (S.player) S.player.requestMedic(); }
+  else if (b.action === 'smoke')  { if (S.player) S.player.requestSmoke(); }
+  else if (b.action === 'ammo')   { if (S.player) { S.player.selectedAmmo = b.ammo; Sound.click(); } }
+  else if (b.action === 'gyro') {
+    if (Gyro.enabled) {
+      Gyro.disable();
+      showMessage('TILT AIM OFF', 1.5);
+      Sound.click();
+    } else {
+      Gyro.requestEnable().then(ok => {
+        if (ok) { showMessage('TILT AIM ON — L/R AIMS, BACK LOBS', 2.2); Sound.click(); }
+        else    { showMessage('TILT NOT AVAILABLE', 2); }
+      });
+    }
+  }
+  else if (b.action === 'voice') {
+    const on = Voice.toggle();
+    showMessage(on ? 'VOICE ON — SAY "FIRE", "SMOKE", "STOP"…' : (Voice.wanted ? 'VOICE UNAVAILABLE' : 'VOICE OFF'), 2.2);
+    Sound.click();
+  }
+  else if (b.action === 'mute') {
+    const on = Sound.toggle();
+    b.label = on ? 'SND' : 'MUTE';
+    showMessage(on ? 'SOUND ON' : 'SOUND MUTED', 1.2);
+    if (on) Sound.click();
+  }
+  else if (b.action === 'recal') {
+    if (Gyro.enabled) { Gyro.recalibrate(); showMessage('TILT RECALIBRATED', 1.2); Sound.click(); }
+    else              { showMessage('ENABLE TILT FIRST', 1.5); }
+  }
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  Sound.init(); Sound.resume();
+  for (const touch of e.changedTouches) {
+    const x = touch.clientX, y = touch.clientY;
+    const btn = hitButton(x, y);
+    if (btn) {
+      Input.touches.set(touch.identifier, { x, y, type: 'btn', btn });
+      doButton(btn);
+      continue;
+    }
+    // Fire button
+    const fd = Math.hypot(x - Input.fireAnchor.x, y - Input.fireAnchor.y);
+    if (fd < Input.fireAnchor.r + 10) {
+      Input.fireTouch.active = true;
+      Input.fireTouch.id = touch.identifier;
+      Input.fireHeld = true;
+      Input.touches.set(touch.identifier, { x, y, type: 'fire' });
+      continue;
+    }
+    // Elevation slider
+    const es = Input.elevSlider;
+    if (es && Math.abs(x - es.x) < es.w && y > es.top - 14 && y < es.bottom + 14 && !Input.elevTouch.active) {
+      Input.elevTouch.active = true;
+      Input.elevTouch.id = touch.identifier;
+      Input.touches.set(touch.identifier, { x, y, type: 'elev' });
+      setElevationFromTouch(y);
+      continue;
+    }
+    // Left joystick (left half)
+    const w = window.innerWidth;
+    if (x < w * 0.42 && !Input.joyL.active) {
+      Input.joyL.active = true;
+      Input.joyL.cx = Input.joyAnchorL.x;
+      Input.joyL.cy = Input.joyAnchorL.y;
+      Input.joyL.x = x; Input.joyL.y = y;
+      Input.joyL.id = touch.identifier;
+      Input.joyL.lastGearShift = 0;
+      Input.touches.set(touch.identifier, { x, y, type: 'joyL' });
+      continue;
+    }
+    // Otherwise treat as aim touch (right side anywhere)
+    if (!Input.aimTouch.active) {
+      Input.aimTouch.active = true;
+      Input.aimTouch.x = x; Input.aimTouch.y = y;
+      Input.aimTouch.id = touch.identifier;
+      Input.touches.set(touch.identifier, { x, y, type: 'aim' });
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    const info = Input.touches.get(touch.identifier);
+    if (!info) continue;
+    info.x = touch.clientX; info.y = touch.clientY;
+    if (info.type === 'joyL') {
+      Input.joyL.x = info.x; Input.joyL.y = info.y;
+    } else if (info.type === 'aim') {
+      Input.aimTouch.x = info.x; Input.aimTouch.y = info.y;
+    } else if (info.type === 'elev') {
+      setElevationFromTouch(info.y);
+    }
+  }
+}, { passive: false });
+
+function setElevationFromTouch(y) {
+  const es = Input.elevSlider;
+  if (!es || !S.player) return;
+  const v = clamp((es.bottom - y) / (es.bottom - es.top), 0, 1);
+  S.player.elevation = v < 0.06 ? 0 : v;   // snap to direct fire at the bottom
+  if (Gyro.enabled) Gyro.baseElev = S.player.elevation;
+}
+
+function endTouch(id) {
+  const info = Input.touches.get(id);
+  if (!info) return;
+  if (info.type === 'joyL') {
+    Input.joyL.active = false;
+    Input.joyL.id = null;
+    Input.joyL.x = Input.joyL.cx;
+    Input.joyL.y = Input.joyL.cy;
+  } else if (info.type === 'aim') {
+    Input.aimTouch.active = false;
+    Input.aimTouch.id = null;
+  } else if (info.type === 'fire') {
+    Input.fireTouch.active = false;
+    Input.fireTouch.id = null;
+    Input.fireHeld = false;
+  } else if (info.type === 'elev') {
+    Input.elevTouch.active = false;
+    Input.elevTouch.id = null;
+  }
+  Input.touches.delete(id);
+}
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) endTouch(touch.identifier);
+}, { passive: false });
+canvas.addEventListener('touchcancel', e => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) endTouch(touch.identifier);
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => {
+  Sound.init(); Sound.resume();
+  const btn = hitButton(e.clientX, e.clientY);
+  if (btn) { doButton(btn); return; }
+  Input.mouseDown = true;
+  Input.fireHeld = true;
+});
+window.addEventListener('mousemove', e => {
+  Input.mouseX = e.clientX; Input.mouseY = e.clientY;
+});
+window.addEventListener('mouseup', () => {
+  Input.mouseDown = false;
+  Input.fireHeld = false;
+});
+
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  Input.keys[k] = true;
+  if ([' ', 'tab', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', 'q', 'e', 'r', 'm', '0', '1', '2', '3', '4'].includes(k)) {
+    e.preventDefault();
+  }
+  if (S.mode !== 'play') return;
+  if (k === 'm' || k === 'tab') S.view = S.view === 'tank' ? 'map' : 'tank';
+  if (k === 'q') S.zoom = clamp(S.zoom / 1.2, S.minZoom, S.maxZoom);
+  if (k === 'e') S.zoom = clamp(S.zoom * 1.2, S.minZoom, S.maxZoom);
+  if (S.player) {
+    if (k === '1') S.player.selectedAmmo = 'AP';
+    if (k === '2') S.player.selectedAmmo = 'HE';
+    if (k === '3') S.player.selectedAmmo = 'TRC';
+    if (k === '4') S.player.selectedAmmo = 'SBT';
+    if (k === 'r') S.player.requestAirdrop();
+    if (k === 'g') S.player.requestMedic();
+    if (k === 'f') S.player.requestSmoke();
+    if (k === 'n') { const on = Sound.toggle(); showMessage(on ? 'SOUND ON' : 'SOUND MUTED', 1.2); }
+    if (k === 'v') { const on = Voice.toggle(); showMessage(on ? 'VOICE ON' : 'VOICE OFF', 1.2); }
+    if (k === 'w') S.player.targetGear = clamp(S.player.targetGear + 1, -1, 3);
+    if (k === 's') S.player.targetGear = clamp(S.player.targetGear - 1, -1, 3);
+    if (k === ' ') Input.fireHeld = true;
+  }
+});
+window.addEventListener('keyup', e => {
+  Input.keys[e.key.toLowerCase()] = false;
+  if (e.key === ' ') Input.fireHeld = false;
+});
+
+window.addEventListener('blur', () => {
+  if (S.mode === 'play') pauseGame();
+});
+
+/* ============== APPLY PLAYER INPUT ============== */
+
+function applyPlayerInput(dt) {
+  const p = S.player;
+  if (!p || !p.alive) return;
+
+  // --- Touch left joystick (DIRECT Y→gear mapping, X→steer) ---
+  if (Input.joyL.active) {
+    const dx = Input.joyL.x - Input.joyL.cx;
+    const dy = Input.joyL.y - Input.joyL.cy;
+    const maxR = JOY_RADIUS;
+    // Independent per-axis clamp — pushing diagonal gives both axes full range
+    const rawX = clamp(dx / maxR, -1, 1);
+    const rawY = clamp(dy / maxR, -1, 1);
+
+    // Steer: X-axis with small dead zone + mild expo curve
+    const steerDead = 0.12;
+    const absX = Math.abs(rawX);
+    if (absX < steerDead) {
+      p.steer = 0;
+    } else {
+      const sign = Math.sign(rawX);
+      const t = (absX - steerDead) / (1 - steerDead);
+      p.steer = sign * Math.min(1, t * (1 + t * 0.4));  // mild expo for finer control
+    }
+
+    // Gear: direct Y position (sticky WHILE held, releases to 0 on lift)
+    // -rawY because screen Y grows downward (push UP = negative dy)
+    const up = -rawY;
+    if      (up >  0.78) p.targetGear = 3;
+    else if (up >  0.50) p.targetGear = 2;
+    else if (up >  0.20) p.targetGear = 1;
+    else if (up < -0.30) p.targetGear = -1;
+    else                 p.targetGear = 0;
+  } else {
+    // Release: brake to stop, straighten
+    p.steer = 0;
+    p.targetGear = 0;
+  }
+
+  // --- Keyboard steering (overrides touch when a key is pressed) ---
+  let kSteer = 0;
+  if (Input.keys['a'] || Input.keys['arrowleft']) kSteer -= 1;
+  if (Input.keys['d'] || Input.keys['arrowright']) kSteer += 1;
+  if (kSteer !== 0) p.steer = kSteer;
+
+  // --- Turret aim ---
+  // Gyro takes priority over touch/mouse when enabled
+  if (Gyro.enabled) {
+    Gyro.applyToPlayer(dt);
+  } else {
+    // Mouse (desktop)
+    if (Input.mouseX && window.innerWidth > 640) {
+      const wx = screenToWorld(Input.mouseX, Input.mouseY);
+      p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
+    }
+    // Touch aim
+    if (Input.aimTouch.active) {
+      const wx = screenToWorld(Input.aimTouch.x, Input.aimTouch.y);
+      p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
+    }
+  }
+
+  // --- Elevation (arrow up/down held; '0' = direct fire) ---
+  if (!Gyro.enabled) {
+    if (Input.keys['arrowup'])   p.elevation = clamp(p.elevation + 0.8 * dt, 0, 1);
+    if (Input.keys['arrowdown']) p.elevation = clamp(p.elevation - 0.8 * dt, 0, 1);
+    if (p.elevation < 0.03 && Input.keys['arrowdown']) p.elevation = 0;
+  }
+  if (Input.keys['0']) p.elevation = 0;
+
+  // --- Voice: a spoken gear overrides the stick until the stick is touched again ---
+  if (p.voiceGear !== undefined && p.voiceGear !== null) {
+    if (Input.joyL.active || Input.keys['w'] || Input.keys['s']) p.voiceGear = null;
+    else p.targetGear = p.voiceGear;
+  }
+
+  // --- Fire ---
+  p.firing = Input.fireHeld;
+  if (p.voiceFire) {
+    p.voiceFire = false;
+    if (p.reloadTimer <= 0 && p.ammo[p.selectedAmmo] > 0) p.fire(S.time);
+    else Sound.dryFire();
+  }
+}
+
+/* ============== AI ============== */
+
+function aiThink(t, dt) {
+  if (!t.alive) return;
+  t.aiTimer -= dt;
+
+  // Pick target
+  let best = null, bestD = Infinity;
+  const mapSight = S.mapSpec ? S.mapSpec.sightMultiplier : 1;
+  const myHill = tankOnHill(t);
+  for (const other of S.tanks) {
+    if (other.team === t.team || !other.alive) continue;
+    const d = dist(t, other);
+    // Pit concealment for the target
+    let inPit = false;
+    for (const p of S.pits) {
+      if (dist2(other.x, other.y, p.x, p.y) < p.r * p.r) { inPit = true; break; }
+    }
+    const effSight = t.spec.sight * mapSight * (inPit ? 0.4 : 1);
+    if (d < effSight && d < bestD) {
+      // LOS check — obstacles always block
+      let blocked = false;
+      for (const ob of S.obstacles) {
+        if (pointLineDistSq(ob.x, ob.y, t.x, t.y, other.x, other.y) < ob.r * ob.r) {
+          const alongT = ((ob.x - t.x) * (other.x - t.x) + (ob.y - t.y) * (other.y - t.y)) / (d * d);
+          if (alongT > 0 && alongT < 1) { blocked = true; break; }
+        }
+      }
+      // Hills block LOS unless either tank is on that hill
+      if (!blocked) {
+        const otherHill = tankOnHill(other);
+        for (const h of S.hills) {
+          if (myHill === h || otherHill === h) continue;
+          const alongT = ((h.x - t.x) * (other.x - t.x) + (h.y - t.y) * (other.y - t.y)) / (d * d);
+          if (alongT > 0 && alongT < 1 && pointLineDistSq(h.x, h.y, t.x, t.y, other.x, other.y) < h.r * h.r) {
+            blocked = true; break;
+          }
+        }
+      }
+      // Smoke screens block LOS
+      if (!blocked) {
+        for (const s of S.smokeScreens) {
+          const sr = s.losRadius();
+          if (sr < 10) continue;
+          const alongT = ((s.x - t.x) * (other.x - t.x) + (s.y - t.y) * (other.y - t.y)) / (d * d);
+          if (alongT > 0 && alongT < 1 && pointLineDistSq(s.x, s.y, t.x, t.y, other.x, other.y) < sr * sr) {
+            blocked = true; break;
+          }
+        }
+      }
+      if (!blocked) { best = other; bestD = d; }
+    }
+  }
+  t.aiTarget = best;
+
+  // State transitions
+  if (t.hp < t.maxHp * 0.3 && t.totalAmmo() > 0) {
+    const myBase = t.team === 'blue' ? BLUE_BASE : RED_BASE;
+    if (dist(t, myBase) > 150) t.aiState = 'retreat';
+    else t.aiState = 'guard';
+  } else if (t.totalAmmo() === 0) {
+    t.aiState = 'resupply';
+  } else if (best) {
+    t.aiState = 'engage';
+  } else {
+    t.aiState = 'patrol';
+  }
+
+  // Act on state
+  if (t.aiState === 'engage') {
+    // Face hull toward target (but offset to show side less)
+    const toTarget = Math.atan2(best.y - t.y, best.x - t.x);
+    const hullDiff = angleDiff(t.hullAngle, toTarget);
+    t.steer = clamp(hullDiff * 1.8, -1, 1);
+
+    // Keep distance in sweet spot
+    const idealD = t.spec.sight * 0.55;
+    if (bestD > idealD * 1.2) t.targetGear = 2;
+    else if (bestD < idealD * 0.6) t.targetGear = -1;
+    else t.targetGear = 1;
+
+    // Lead target
+    const ammoSpec = AMMO[t.selectedAmmo];
+    const timeToHit = bestD / ammoSpec.v;
+    const leadVx = Math.cos(best.hullAngle) * best.speed;
+    const leadVy = Math.sin(best.hullAngle) * best.speed;
+    const aimX = best.x + leadVx * timeToHit;
+    const aimY = best.y + leadVy * timeToHit;
+    t.turretTarget = Math.atan2(aimY - t.y, aimX - t.x);
+
+    // Fire if aligned
+    const turretOff = Math.abs(angleDiff(t.turretAngle, t.turretTarget));
+    if (turretOff < 0.08 && t.reloadTimer <= 0 && t.ammo[t.selectedAmmo] > 0) {
+      t.firing = true;
+    } else {
+      t.firing = false;
+    }
+
+    // Select best ammo for the situation
+    if (t.aiTimer <= 0) {
+      t.aiTimer = 1 + Math.random();
+      if (bestD > 800 && t.ammo.SBT > 0) t.selectedAmmo = 'SBT';
+      else if (bestD < 400 && t.ammo.HE > 0 && Math.random() < 0.4) t.selectedAmmo = 'HE';
+      else if (t.ammo.AP > 0) t.selectedAmmo = 'AP';
+      else {
+        for (const k of AMMO_ORDER) if (t.ammo[k] > 0) { t.selectedAmmo = k; break; }
+      }
+    }
+  } else if (t.aiState === 'retreat' || t.aiState === 'resupply') {
+    const myBase = t.team === 'blue' ? BLUE_BASE : RED_BASE;
+    const toBase = Math.atan2(myBase.y - t.y, myBase.x - t.x);
+    const hullDiff = angleDiff(t.hullAngle, toBase);
+    t.steer = clamp(hullDiff * 1.8, -1, 1);
+    t.targetGear = dist(t, myBase) > myBase.r + 50 ? 3 : 0;
+    t.firing = false;
+    t.turretTarget = toBase;
+  } else if (t.aiState === 'guard') {
+    t.steer = 0; t.targetGear = 0; t.firing = false;
+    // Scan for enemies with turret
+    if (t.aiTimer <= 0) {
+      t.aiTimer = rand(1.5, 3);
+      t.turretTarget = normAngle(t.turretAngle + rand(-1, 1));
+    }
+  } else { // patrol
+    if (!t.aiPatrolTarget || t.aiTimer <= 0 ||
+        dist(t, t.aiPatrolTarget) < 100) {
+      t.aiTimer = rand(4, 8);
+      // Head toward enemy side
+      const enemyBase = t.team === 'blue' ? RED_BASE : BLUE_BASE;
+      t.aiPatrolTarget = {
+        x: lerp(t.x, enemyBase.x, 0.4) + rand(-400, 400),
+        y: lerp(t.y, enemyBase.y, 0.4) + rand(-400, 400),
+      };
+    }
+    const toP = Math.atan2(t.aiPatrolTarget.y - t.y, t.aiPatrolTarget.x - t.x);
+    const hullDiff = angleDiff(t.hullAngle, toP);
+    t.steer = clamp(hullDiff * 1.8, -1, 1);
+    t.targetGear = 2;
+    t.firing = false;
+    t.turretTarget = toP;
+  }
+}
+
+function pointLineDistSq(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return dist2(px, py, ax, ay);
+  const t = clamp(((px - ax) * dx + (py - ay) * dy) / lenSq, 0, 1);
+  return dist2(px, py, ax + t * dx, ay + t * dy);
+}
+
+// Returns the hill the tank is standing on (or null)
+function tankOnHill(t) {
+  for (const h of S.hills) {
+    if (dist2(t.x, t.y, h.x, h.y) < h.r * h.r) return h;
+  }
+  return null;
+}
+
+/* ============== GAME MANAGEMENT ============== */
+
+function initWorld() {
+  S.tanks = [];
+  S.bullets = [];
+  S.effects = [];
+  S.obstacles = [];
+  S.pits = [];
+  S.hills = [];
+  S.ice = [];
+  S.airdrops = [];
+  S.smokeScreens = [];
+  S.playerSpotted.clear();
+  S.luminous = [];
+  S.playerKills = 0;
+  S.playerDeaths = 0;
+  S.scoreBlue = 0;
+  S.scoreRed = 0;
+  S.view = 'tank';
+  S.zoom = 0.65;
+  S.airdropCooldown = 0;
+  S.medicCooldown = 0;
+  S.smokeCooldown = 0;
+  S.playerInCover = false;
+  S.startTime = performance.now();
+  S.mapSpec = MAPS[S.selectedMap] || MAPS.FOREST;
+  const M = S.mapSpec;
+  Weather.init();
+  if (Gyro.enabled) Gyro.recalibrate();
+
+  // Grid layout (urban): one building per block, streets between
+  if (M.layout === 'grid') {
+    for (let gx = M.gridX0; gx < WORLD_W - 500; gx += M.gridPitchX) {
+      for (let gy = M.gridY0; gy < WORLD_H - 200; gy += M.gridPitchY) {
+        if (Math.random() < 0.12) continue; // vacant lot
+        const r = rand(M.buildingMin, M.buildingMax);
+        const x = gx + rand(-18, 18), y = gy + rand(-18, 18);
+        if (dist({ x, y }, BLUE_BASE) < BLUE_BASE.r + 60) continue;
+        if (dist({ x, y }, RED_BASE) < RED_BASE.r + 60) continue;
+        const b = new Obstacle(x, y, r, 'building');
+        b.h = 60 + Math.floor(b.seed * 4) * 18;   // 60-114: height used for shell-over-roof checks
+        S.obstacles.push(b);
+      }
+    }
+  }
+
+  // Scatter obstacles according to map
+  const scatterKind = M.layout === 'grid' ? 'rock' : M.obstacleType;
+  for (let i = 0; i < M.nObstacles; i++) {
+    let tries = 0, x, y, r;
+    while (tries++ < 20) {
+      x = rand(300, WORLD_W - 300);
+      y = rand(200, WORLD_H - 200);
+      r = rand(M.obstacleSizeMin, M.obstacleSizeMax);
+      if (dist({ x, y }, BLUE_BASE) < BLUE_BASE.r + 100) continue;
+      if (dist({ x, y }, RED_BASE) < RED_BASE.r + 100) continue;
+      let ok = true;
+      for (const ob of S.obstacles) {
+        if (dist({ x, y }, ob) < r + ob.r + 40) { ok = false; break; }
+      }
+      if (ok) { S.obstacles.push(new Obstacle(x, y, r, scatterKind)); break; }
+    }
+  }
+
+  // Scatter pits (concealment)
+  for (let i = 0; i < M.pits; i++) {
+    let tries = 0, x, y, r;
+    while (tries++ < 25) {
+      x = rand(500, WORLD_W - 500);
+      y = rand(250, WORLD_H - 250);
+      r = rand(M.pitSizeMin || 50, M.pitSizeMax || 95);
+      if (dist({ x, y }, BLUE_BASE) < BLUE_BASE.r + 150) continue;
+      if (dist({ x, y }, RED_BASE) < RED_BASE.r + 150) continue;
+      let ok = true;
+      for (const ob of S.obstacles) {
+        if (dist({ x, y }, ob) < r + ob.r + 20) { ok = false; break; }
+      }
+      for (const p of S.pits) {
+        if (dist({ x, y }, p) < r + p.r + 100) { ok = false; break; }
+      }
+      if (ok) { S.pits.push(new Pit(x, y, r)); break; }
+    }
+  }
+
+  // Scatter hills (elevation — block LOS unless on them)
+  for (let i = 0; i < (M.hills || 0); i++) {
+    let tries = 0, x, y, r;
+    while (tries++ < 30) {
+      x = rand(600, WORLD_W - 600);
+      y = rand(300, WORLD_H - 300);
+      r = rand(M.hillSizeMin || 150, M.hillSizeMax || 250);
+      if (dist({ x, y }, BLUE_BASE) < BLUE_BASE.r + 200) continue;
+      if (dist({ x, y }, RED_BASE) < RED_BASE.r + 200) continue;
+      let ok = true;
+      for (const h of S.hills) {
+        if (dist({ x, y }, h) < r + h.r + 80) { ok = false; break; }
+      }
+      // Hills can overlap pits/obstacles — they're just visual + LOS zones
+      if (ok) { S.hills.push(new Hill(x, y, r)); break; }
+    }
+  }
+
+  // Scatter ice patches (snow only)
+  for (let i = 0; i < (M.ice || 0); i++) {
+    let tries = 0, x, y, r;
+    while (tries++ < 25) {
+      x = rand(400, WORLD_W - 400);
+      y = rand(200, WORLD_H - 200);
+      r = rand(M.iceSizeMin || 60, M.iceSizeMax || 130);
+      if (dist({ x, y }, BLUE_BASE) < BLUE_BASE.r + 100) continue;
+      if (dist({ x, y }, RED_BASE) < RED_BASE.r + 100) continue;
+      let ok = true;
+      for (const p of S.ice) {
+        if (dist({ x, y }, p) < r + p.r + 50) { ok = false; break; }
+      }
+      if (ok) { S.ice.push(new IcePatch(x, y, r)); break; }
+    }
+  }
+
+  // Player tank
+  const p = new Tank(BLUE_BASE.x, BLUE_BASE.y, S.selectedType, 'blue', true);
+  p.hullAngle = 0; p.turretAngle = 0; p.turretTarget = 0;
+  S.player = p;
+  S.tanks.push(p);
+
+  // Blue allies (2)
+  const allyTypes = ['MEDIUM', 'LIGHT', 'HEAVY', 'SCOUT'];
+  for (let i = 0; i < 2; i++) {
+    const t = new Tank(
+      BLUE_BASE.x + rand(-100, 100),
+      BLUE_BASE.y + rand(-100, 100),
+      pick(allyTypes), 'blue'
+    );
+    S.tanks.push(t);
+  }
+
+  // Red enemies (4)
+  const enemyTypes = ['MEDIUM', 'MEDIUM', 'LIGHT', 'HEAVY', 'SCOUT'];
+  for (let i = 0; i < 4; i++) {
+    const t = new Tank(
+      RED_BASE.x + rand(-100, 100),
+      RED_BASE.y + rand(-100, 100),
+      pick(enemyTypes), 'red'
+    );
+    S.tanks.push(t);
+  }
+
+  S.cam.x = p.x; S.cam.y = p.y;
+}
+
+function startGame() {
+  if (Link.spy) Link.exitSpy();
+  S.selectedType = currentlySelectedTankType;
+  S.selectedMap = currentlySelectedMap;
+  initWorld();
+  Link.terrainKey = '';
+  Link.init();
+  S.mode = 'play';
+  // Init / resume audio on user gesture (browser requirement)
+  Sound.init(); Sound.resume();
+  Sound.music.start(1);
+  if (Voice.wanted) Voice.start();
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('gameover').classList.add('hidden');
+  document.getElementById('pauseBtn').classList.add('visible');
+}
+
+function pauseGame() {
+  if (S.mode !== 'play') return;
+  S.mode = 'menu';
+  Link.clearHost();
+  Sound.stopEngines();
+  Sound.music.setIntensity(0.2);
+  Voice.stop();
+  document.getElementById('menu').classList.remove('hidden');
+  document.getElementById('pauseBtn').classList.remove('visible');
+}
+
+function endGame(playerWon) {
+  Link.clearHost();
+  Sound.stopEngines();
+  Sound.music.setIntensity(0.2);
+  Voice.stop();
+  S.mode = 'over';
+  const go = document.getElementById('gameover');
+  go.classList.remove('hidden');
+  document.getElementById('goTitle').textContent = playerWon ? 'VICTORY' : 'DEFEAT';
+  document.getElementById('goTitleSub').textContent =
+    playerWon ? '[BATTLEFIELD SECURED]' : '[POSITION LOST]';
+  const mins = Math.floor((performance.now() - S.startTime) / 60000);
+  const secs = Math.floor((performance.now() - S.startTime) / 1000) % 60;
+
+  // Award upgrade points: 1 per kill, +3 bonus for victory
+  const bonus = playerWon ? 3 : 0;
+  const earned = S.playerKills + bonus;
+  Progression.points += earned;
+  Progression.totalKills += S.playerKills;
+  Progression.totalMatches += 1;
+  Progression.save();
+
+  document.getElementById('goStats').innerHTML =
+    `KILLS <span style="color:#c9a85a">${S.playerKills}</span> &nbsp;·&nbsp; ` +
+    `DEATHS <span style="color:#d46a5a">${S.playerDeaths}</span> &nbsp;·&nbsp; ` +
+    `TIME <span style="color:#c9a85a">${mins}:${String(secs).padStart(2, '0')}</span><br>` +
+    `BLUE <span style="color:#5a9ad4">${S.scoreBlue}</span> / ` +
+    `RED <span style="color:#d46a5a">${S.scoreRed}</span>` +
+    `<br><br><span style="color:#c9a85a; font-weight: bold;">+${earned} UPGRADE PTS</span>` +
+    (bonus > 0 ? ` <span style="color:#6ba35a;">(${S.playerKills} kills + ${bonus} victory)</span>` : '') +
+    `<br><span style="color:#6b7266; font-size: 0.7em;">TOTAL ${Progression.points} PTS AVAILABLE</span>`;
+  document.getElementById('pauseBtn').classList.remove('visible');
+
+  // Refresh menu widgets so when they return to menu, armory shows new balance
+  buildArmoryUI();
+  buildTankSelectUI();
+}
+
+function checkWinCondition() {
+  if (S.scoreBlue >= S.winScore) endGame(true);
+  else if (S.scoreRed >= S.winScore) endGame(false);
+}
+
+function showMessage(msg, dur = 2) {
+  S.message = msg;
+  S.messageUntil = S.time + dur;
+}
+
+/* ============== CAMERA / COORD ============== */
+
+function screenToWorld(sx, sy) {
+  const w = window.innerWidth, h = window.innerHeight;
+  if (S.view === 'map') {
+    const scale = Math.min(w / WORLD_W, h / WORLD_H) * 0.9;
+    const ox = (w - WORLD_W * scale) / 2;
+    const oy = (h - WORLD_H * scale) / 2;
+    return { x: (sx - ox) / scale, y: (sy - oy) / scale };
+  } else {
+    // Driver view: translate+rotate+scale inverse
+    const z = S.zoom;
+    const screenCenterY = h * 0.65;
+    const lx = (sx - w / 2) / z;
+    const ly = (sy - screenCenterY) / z;
+    // Unrotate by +(π/2 + camAngle)
+    const a = Math.PI / 2 + S.cam.angle;
+    const ux = Math.cos(a) * lx - Math.sin(a) * ly;
+    const uy = Math.sin(a) * lx + Math.cos(a) * ly;
+    return { x: ux + S.cam.x, y: uy + S.cam.y };
+  }
+}
+
+// Opposite: world coords -> screen coords (driver view only)
+function worldToScreenDriver(wx, wy) {
+  const w = window.innerWidth, h = window.innerHeight;
+  const z = S.zoom;
+  const screenCenterY = h * 0.65;
+  const relX = wx - S.cam.x, relY = wy - S.cam.y;
+  const a = -(Math.PI / 2 + S.cam.angle);
+  const rotX = Math.cos(a) * relX - Math.sin(a) * relY;
+  const rotY = Math.sin(a) * relX + Math.cos(a) * relY;
+  return { x: w / 2 + rotX * z, y: screenCenterY + rotY * z };
+}
+
+/* ============== UPDATE ============== */
+
+function update(dt) {
+  S.time += dt;
+  if (S.airdropCooldown > 0) S.airdropCooldown -= dt;
+  if (S.medicCooldown  > 0) S.medicCooldown  -= dt;
+  if (S.smokeCooldown  > 0) S.smokeCooldown  -= dt;
+
+  // Weather (screen-space particles) always animates even in menu-paused frames? only while playing is fine
+  Weather.update(dt);
+
+  // Inputs
+  applyPlayerInput(dt);
+
+  // AI
+  for (const t of S.tanks) {
+    if (t.isPlayer) continue;
+    aiThink(t, dt);
+  }
+
+  // Tanks
+  for (const t of S.tanks) t.update(dt, S.time);
+  Sound.updateEngines(dt);
+
+  // Bullets
+  for (const b of S.bullets) b.update(dt);
+  S.bullets = S.bullets.filter(b => !b.dead);
+
+  // Airdrops
+  for (const a of S.airdrops) a.update(dt);
+  S.airdrops = S.airdrops.filter(a => !a.dead);
+
+  // Smoke screens
+  for (const s of S.smokeScreens) s.update(dt);
+  S.smokeScreens = S.smokeScreens.filter(s => !s.dead);
+
+  // Effects
+  for (const e of S.effects) e.update(dt);
+  S.effects = S.effects.filter(e => !e.dead);
+
+  // Luminous zones (tracer illumination)
+  for (const l of S.luminous) l.life -= dt;
+  S.luminous = S.luminous.filter(l => l.life > 0);
+
+  // Companion-map broadcast
+  Link.push(performance.now());
+
+  // Reveal enemies seen by player team or illuminated
+  const now = S.time;
+  if (!S._spotSweep || now - S._spotSweep > 10) {
+    S._spotSweep = now;
+    for (const [id, exp] of S.playerSpotted) if (exp < now - 5) S.playerSpotted.delete(id);
+  }
+  const mapSight = S.mapSpec ? S.mapSpec.sightMultiplier : 1;
+  for (const t of S.tanks) {
+    if (t.team === 'blue' || !t.alive) continue;
+    // Pit concealment — target inside a pit is harder to spot
+    let inPit = false;
+    for (const p of S.pits) {
+      if (dist2(t.x, t.y, p.x, p.y) < p.r * p.r) { inPit = true; break; }
+    }
+    const concealMult = inPit ? 0.4 : 1;
+    // Which hill (if any) the target is on
+    const targetHill = tankOnHill(t);
+    // Spotted by any blue tank
+    for (const b of S.tanks) {
+      if (b.team !== 'blue' || !b.alive) continue;
+      const d = dist(b, t);
+      const effSight = b.spec.sight * mapSight * concealMult;
+      if (d < effSight) {
+        let blocked = false;
+        // Rocks/trees always block
+        for (const ob of S.obstacles) {
+          const alongT = ((ob.x - b.x) * (t.x - b.x) + (ob.y - b.y) * (t.y - b.y)) / (d * d);
+          if (alongT > 0 && alongT < 1 && pointLineDistSq(ob.x, ob.y, b.x, b.y, t.x, t.y) < ob.r * ob.r) {
+            blocked = true; break;
+          }
+        }
+        // Hills block LOS UNLESS observer or target is on that hill
+        if (!blocked) {
+          const observerHill = tankOnHill(b);
+          for (const h of S.hills) {
+            if (observerHill === h || targetHill === h) continue;
+            const alongT = ((h.x - b.x) * (t.x - b.x) + (h.y - b.y) * (t.y - b.y)) / (d * d);
+            if (alongT > 0 && alongT < 1 && pointLineDistSq(h.x, h.y, b.x, b.y, t.x, t.y) < h.r * h.r) {
+              blocked = true; break;
+            }
+          }
+        }
+        // Smoke screens block LOS
+        if (!blocked) {
+          for (const s of S.smokeScreens) {
+            const sr = s.losRadius();
+            if (sr < 10) continue;
+            const alongT = ((s.x - b.x) * (t.x - b.x) + (s.y - b.y) * (t.y - b.y)) / (d * d);
+            if (alongT > 0 && alongT < 1 && pointLineDistSq(s.x, s.y, b.x, b.y, t.x, t.y) < sr * sr) {
+              blocked = true; break;
+            }
+          }
+        }
+        if (!blocked) { S.playerSpotted.set(t.id, now + 2); break; }
+      }
+    }
+    // Illuminated by tracer (ignores concealment — tracers burn through)
+    for (const l of S.luminous) {
+      if (dist(l, t) < l.r) { S.playerSpotted.set(t.id, now + 1); break; }
+    }
+  }
+
+  // Player cover status (any enemy with clear LOS to player?)
+  if (S.player && S.player.alive) {
+    let inCover = true;
+    let anyEnemyAware = false;
+    for (const enemy of S.tanks) {
+      if (enemy.team === S.player.team || !enemy.alive) continue;
+      const d = dist(enemy, S.player);
+      if (d > enemy.spec.sight * mapSight) continue;
+      anyEnemyAware = true;
+      // Check LOS from enemy to player (same rules as spotting)
+      let blocked = false;
+      for (const ob of S.obstacles) {
+        const alongT = ((ob.x - enemy.x) * (S.player.x - enemy.x) + (ob.y - enemy.y) * (S.player.y - enemy.y)) / (d * d);
+        if (alongT > 0 && alongT < 1 && pointLineDistSq(ob.x, ob.y, enemy.x, enemy.y, S.player.x, S.player.y) < ob.r * ob.r) {
+          blocked = true; break;
+        }
+      }
+      if (!blocked) {
+        const eHill = tankOnHill(enemy);
+        const pHill = tankOnHill(S.player);
+        for (const h of S.hills) {
+          if (eHill === h || pHill === h) continue;
+          const alongT = ((h.x - enemy.x) * (S.player.x - enemy.x) + (h.y - enemy.y) * (S.player.y - enemy.y)) / (d * d);
+          if (alongT > 0 && alongT < 1 && pointLineDistSq(h.x, h.y, enemy.x, enemy.y, S.player.x, S.player.y) < h.r * h.r) {
+            blocked = true; break;
+          }
+        }
+      }
+      if (!blocked) {
+        for (const s of S.smokeScreens) {
+          const sr = s.losRadius();
+          if (sr < 10) continue;
+          const alongT = ((s.x - enemy.x) * (S.player.x - enemy.x) + (s.y - enemy.y) * (S.player.y - enemy.y)) / (d * d);
+          if (alongT > 0 && alongT < 1 && pointLineDistSq(s.x, s.y, enemy.x, enemy.y, S.player.x, S.player.y) < sr * sr) {
+            blocked = true; break;
+          }
+        }
+      }
+      if (!blocked) { inCover = false; break; }
+    }
+    S.playerInCover = anyEnemyAware && inCover;
+  } else {
+    S.playerInCover = false;
+  }
+
+  // Camera follow player (position direct, angle lightly smoothed)
+  if (S.player && S.view === 'tank') {
+    S.cam.x = S.player.x;
+    S.cam.y = S.player.y;
+    if (S.player.alive) {
+      const aDiff = angleDiff(S.cam.angle, S.player.hullAngle);
+      S.cam.angle = normAngle(S.cam.angle + aDiff * clamp(dt * 18, 0, 1));
+    }
+  }
+
+  // Message expiry
+  if (S.time > S.messageUntil) S.message = '';
+}
+
+/* ============== RENDER ============== */
+
+function render() {
+  const w = window.innerWidth, h = window.innerHeight;
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // Companion map mode: draw the host's battlefield
+  if (S.mode === 'spy') { renderSpyView(); return; }
+
+  // Main view
+  if (S.view === 'map') renderMapView();
+  else renderTankView();
+
+  // Picture-in-picture of the OTHER view, always visible
+  if (S.mode === 'play') {
+    const rect = getMiniViewRect();
+    if (S.view === 'tank') {
+      // Driver is main, show tactical minimap in corner
+      renderTacticalMinimap(rect.x, rect.y, rect.w, rect.h);
+    } else {
+      // Map is main, show mini driver view in corner
+      renderMiniDriverView(rect.x, rect.y, rect.w, rect.h);
+    }
+  }
+
+  renderHUD();
+}
+
+function renderTankView() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const z = S.zoom;
+  const camAngle = S.player ? S.cam.angle : 0;
+  // Tank sits in lower third of screen (so most of view is "ahead")
+  const screenCenterY = h * 0.65;
+
+  ctx.save();
+  ctx.translate(w / 2, screenCenterY);
+  ctx.scale(z, z);
+  // Rotate world so camAngle (hull forward) points UP on screen
+  ctx.rotate(-(Math.PI / 2 + camAngle));
+  ctx.translate(-S.cam.x, -S.cam.y);
+
+  // Visible world bounds for culling — use a conservative box around the camera
+  const viewRadius = Math.hypot(w, h) / (2 * z) + 80;
+  const vl = S.cam.x - viewRadius;
+  const vr = S.cam.x + viewRadius;
+  const vt = S.cam.y - viewRadius;
+  const vb = S.cam.y + viewRadius;
+
+  drawGround(vl, vr, vt, vb);
+  // Terrain layering: hills behind everything (except ground), then pits, ice, bases, obstacles
+  drawHills(vl, vr, vt, vb);
+  drawBases();
+  drawPits(vl, vr, vt, vb);
+  drawIce(vl, vr, vt, vb);
+  drawTreads(vl, vr, vt, vb);
+  drawObstacles(vl, vr, vt, vb);
+  drawAirdrops();
+
+  // Tracer illumination zones (soft glow before drawing bullets/tanks)
+  for (const l of S.luminous) {
+    const a = clamp(l.life / 0.1, 0, 1);
+    const grd = ctx.createRadialGradient(l.x, l.y, 10, l.x, l.y, l.r);
+    grd.addColorStop(0, `rgba(120, 255, 160, ${0.14 * a})`);
+    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+  }
+
+  // Smoke behind tanks
+  for (const e of S.effects) {
+    if (e instanceof Smoke) drawSmoke(e);
+  }
+
+  // Tanks
+  for (const t of S.tanks) {
+    if (t.x < vl || t.x > vr || t.y < vt || t.y > vb) continue;
+    // Only render enemies if visible / spotted
+    const visible = t.team === 'blue' || t.isPlayer ||
+                    (S.playerSpotted.get(t.id) || 0) > S.time;
+    if (!visible && t.alive) continue;
+    drawTank(t);
+  }
+
+  // Bullets (over tanks)
+  for (const b of S.bullets) drawBullet(b);
+
+  // Effects (sparks, flashes, explosions) on top
+  for (const e of S.effects) {
+    if (e instanceof MuzzleFlash) drawMuzzleFlash(e);
+    else if (e instanceof Spark) drawSpark(e);
+    else if (e instanceof Explosion) drawExplosion(e);
+  }
+
+  // Smoke screens on top of everything in world
+  drawSmokeScreens(vl, vr, vt, vb);
+
+  ctx.restore();
+
+  // Weather overlay (screen-space, over world but under HUD)
+  Weather.render(ctx);
+}
+
+function drawGround(vl, vr, vt, vb) {
+  const M = S.mapSpec || MAPS.FOREST;
+  // Base color
+  ctx.fillStyle = M.ground;
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+  // Subtle grid
+  ctx.strokeStyle = M.grid;
+  ctx.lineWidth = 1 / S.zoom;
+  const gs = 200;
+  const x0 = Math.floor(vl / gs) * gs, x1 = Math.ceil(vr / gs) * gs;
+  const y0 = Math.floor(vt / gs) * gs, y1 = Math.ceil(vb / gs) * gs;
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += gs) {
+    ctx.moveTo(x, Math.max(0, vt)); ctx.lineTo(x, Math.min(WORLD_H, vb));
+  }
+  for (let y = y0; y <= y1; y += gs) {
+    ctx.moveTo(Math.max(0, vl), y); ctx.lineTo(Math.min(WORLD_W, vr), y);
+  }
+  ctx.stroke();
+
+  // Streets (grid maps): lighter asphalt bands between blocks with a centre line
+  if (M.layout === 'grid') {
+    const roadW = 90;
+    ctx.fillStyle = '#35353a';
+    for (let x = M.gridX0 + M.gridPitchX / 2; x < WORLD_W - 500; x += M.gridPitchX) {
+      if (x + roadW / 2 < vl || x - roadW / 2 > vr) continue;
+      ctx.fillRect(x - roadW / 2, 0, roadW, WORLD_H);
+    }
+    for (let y = M.gridY0 + M.gridPitchY / 2; y < WORLD_H - 200; y += M.gridPitchY) {
+      if (y + roadW / 2 < vt || y - roadW / 2 > vb) continue;
+      ctx.fillRect(0, y - roadW / 2, WORLD_W, roadW);
+    }
+    ctx.strokeStyle = 'rgba(210, 190, 90, 0.35)';
+    ctx.lineWidth = 2 / S.zoom;
+    ctx.setLineDash([24, 18]);
+    ctx.beginPath();
+    for (let x = M.gridX0 + M.gridPitchX / 2; x < WORLD_W - 500; x += M.gridPitchX) {
+      if (x < vl || x > vr) continue;
+      ctx.moveTo(x, Math.max(0, vt)); ctx.lineTo(x, Math.min(WORLD_H, vb));
+    }
+    for (let y = M.gridY0 + M.gridPitchY / 2; y < WORLD_H - 200; y += M.gridPitchY) {
+      if (y < vt || y > vb) continue;
+      ctx.moveTo(Math.max(0, vl), y); ctx.lineTo(Math.min(WORLD_W, vr), y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // World border
+  ctx.strokeStyle = M.border;
+  ctx.lineWidth = 3 / S.zoom;
+  ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+}
+
+function drawPits(vl, vr, vt, vb) {
+  for (const p of S.pits) {
+    if (p.x + p.r < vl || p.x - p.r > vr || p.y + p.r < vt || p.y - p.r > vb) continue;
+    // Soft radial shadow — looks like a sunken depression
+    const grd = ctx.createRadialGradient(p.x, p.y, p.r * 0.3, p.x, p.y, p.r);
+    grd.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+    grd.addColorStop(0.75, 'rgba(0, 0, 0, 0.25)');
+    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, TAU);
+    ctx.fill();
+    // Rim shadow for depth
+    ctx.strokeStyle = 'rgba(20, 15, 8, 0.5)';
+    ctx.lineWidth = 2 / S.zoom;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * 0.85, 0, TAU);
+    ctx.stroke();
+    // Inner dark center
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * 0.5, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawHills(vl, vr, vt, vb) {
+  const M = S.mapSpec || MAPS.FOREST;
+  for (const h of S.hills) {
+    if (h.x + h.r < vl || h.x - h.r > vr || h.y + h.r < vt || h.y - h.r > vb) continue;
+    // SE shadow for depth
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    ctx.arc(h.x + h.r * 0.08, h.y + h.r * 0.08, h.r, 0, TAU);
+    ctx.fill();
+    // Hill body — radial gradient lighter in center (raised ground)
+    const grd = ctx.createRadialGradient(h.x - h.r * 0.2, h.y - h.r * 0.2, h.r * 0.1, h.x, h.y, h.r);
+    grd.addColorStop(0, M.hillTint);
+    grd.addColorStop(0.75, M.hillTint);
+    grd.addColorStop(1, M.ground);
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r, 0, TAU);
+    ctx.fill();
+    // Rim contour
+    ctx.strokeStyle = M.hillRim;
+    ctx.lineWidth = 1.5 / S.zoom;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r * 0.95, 0, TAU);
+    ctx.stroke();
+    // Inner contour (topographic feel)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.lineWidth = 1 / S.zoom;
+    ctx.beginPath();
+    ctx.arc(h.x - h.r * 0.1, h.y - h.r * 0.1, h.r * 0.65, 0, TAU);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(h.x - h.r * 0.15, h.y - h.r * 0.15, h.r * 0.4, 0, TAU);
+    ctx.stroke();
+  }
+}
+
+function drawTreads(vl, vr, vt, vb) {
+  // Darken tread marks (two small dots per tread point, perpendicular to hull)
+  for (const tank of S.tanks) {
+    for (const tr of tank.treads) {
+      if (tr.x < vl || tr.x > vr || tr.y < vt || tr.y > vb) continue;
+      const a = Math.min(1, tr.life / 7) * 0.28;
+      const perpX = -Math.sin(tr.angle) * (tank.spec.size.w / 2 + 1);
+      const perpY =  Math.cos(tr.angle) * (tank.spec.size.w / 2 + 1);
+      ctx.fillStyle = `rgba(0, 0, 0, ${a})`;
+      ctx.fillRect(tr.x + perpX - 1, tr.y + perpY - 1, 2.5, 2.5);
+      ctx.fillRect(tr.x - perpX - 1, tr.y - perpY - 1, 2.5, 2.5);
+    }
+  }
+}
+
+function drawSmokeScreens(vl, vr, vt, vb) {
+  for (const s of S.smokeScreens) {
+    if (s.x + s.r < vl || s.x - s.r > vr || s.y + s.r < vt || s.y - s.r > vb) continue;
+    const alpha = Math.min(1, s.life / 2) * 0.85; // fades near end
+    // Multiple soft puffs for cloudy look
+    for (let i = 0; i < 4; i++) {
+      const off = s.seed * TAU + i * 1.57;
+      const px = s.x + Math.cos(off) * s.r * 0.35;
+      const py = s.y + Math.sin(off) * s.r * 0.35;
+      const grd = ctx.createRadialGradient(px, py, 0, px, py, s.r * 0.75);
+      grd.addColorStop(0, `rgba(185, 185, 180, ${alpha})`);
+      grd.addColorStop(0.6, `rgba(140, 140, 135, ${alpha * 0.8})`);
+      grd.addColorStop(1, 'rgba(100, 100, 95, 0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(px, py, s.r * 0.75, 0, TAU);
+      ctx.fill();
+    }
+    // Central dense puff
+    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+    grd.addColorStop(0, `rgba(170, 170, 165, ${alpha * 0.9})`);
+    grd.addColorStop(0.7, `rgba(140, 140, 135, ${alpha * 0.6})`);
+    grd.addColorStop(1, 'rgba(100, 100, 95, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawIce(vl, vr, vt, vb) {
+  for (const p of S.ice) {
+    if (p.x + p.r < vl || p.x - p.r > vr || p.y + p.r < vt || p.y - p.r > vb) continue;
+    // Pale blue-white semi-transparent circle
+    const grd = ctx.createRadialGradient(p.x, p.y, p.r * 0.2, p.x, p.y, p.r);
+    grd.addColorStop(0, 'rgba(220, 240, 255, 0.75)');
+    grd.addColorStop(0.7, 'rgba(190, 220, 240, 0.55)');
+    grd.addColorStop(1, 'rgba(170, 200, 230, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, TAU);
+    ctx.fill();
+    // Crack lines for texture
+    ctx.strokeStyle = 'rgba(120, 160, 200, 0.4)';
+    ctx.lineWidth = 1 / S.zoom;
+    const sx = p.x + Math.cos(p.seed * TAU) * p.r * 0.3;
+    const sy = p.y + Math.sin(p.seed * TAU) * p.r * 0.3;
+    for (let i = 0; i < 3; i++) {
+      const a = p.seed * TAU + i * 2.1;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(p.x + Math.cos(a) * p.r * 0.85, p.y + Math.sin(a) * p.r * 0.85);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawBases() {
+  for (const base of [BLUE_BASE, RED_BASE]) {
+    const isBlue = base.team === 'blue';
+    ctx.fillStyle = isBlue ? COLORS.blueBase : COLORS.redBase;
+    ctx.beginPath();
+    ctx.arc(base.x, base.y, base.r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = isBlue ? COLORS.blueBaseEdge : COLORS.redBaseEdge;
+    ctx.lineWidth = 2 / S.zoom;
+    ctx.setLineDash([10 / S.zoom, 6 / S.zoom]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Base building/HQ icon (counter-rotated so it stays upright in driver view)
+    ctx.save();
+    ctx.translate(base.x, base.y);
+    ctx.rotate(Math.PI / 2 + S.cam.angle);
+    const col = isBlue ? COLORS.blue : COLORS.red;
+    // House silhouette
+    const sz = 46;
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.75;
+    // Walls
+    ctx.fillRect(-sz / 2, -sz * 0.1, sz, sz * 0.55);
+    // Roof
+    ctx.beginPath();
+    ctx.moveTo(-sz / 2 - 6, -sz * 0.1);
+    ctx.lineTo(0, -sz * 0.55);
+    ctx.lineTo(sz / 2 + 6, -sz * 0.1);
+    ctx.closePath();
+    ctx.fill();
+    // Door
+    ctx.fillStyle = COLORS.bgDark;
+    ctx.fillRect(-sz * 0.12, sz * 0.18, sz * 0.24, sz * 0.27);
+    ctx.globalAlpha = 1;
+    // Label
+    ctx.fillStyle = col;
+    ctx.font = `bold 11px 'Arial Narrow', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isBlue ? 'BLUE HQ' : 'RED HQ', 0, sz * 0.8);
+    ctx.fillStyle = COLORS.textDim;
+    ctx.font = `9px ui-monospace, monospace`;
+    ctx.fillText('REARM · REPAIR', 0, sz * 1.1);
+    ctx.restore();
+  }
+}
+
+function drawObstacles(vl, vr, vt, vb) {
+  for (const ob of S.obstacles) {
+    if (ob.x + ob.r < vl || ob.x - ob.r > vr || ob.y + ob.r < vt || ob.y - ob.r > vb) continue;
+    if (ob.kind === 'tree' || ob.kind === 'snowtree') {
+      const isSnow = ob.kind === 'snowtree';
+      // Trunk shadow on ground
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.arc(ob.x + 4, ob.y + 4, ob.r * 0.95, 0, TAU);
+      ctx.fill();
+      // Outer canopy
+      ctx.fillStyle = isSnow ? '#2a4028' : '#2e4423';
+      ctx.beginPath();
+      ctx.arc(ob.x, ob.y, ob.r, 0, TAU);
+      ctx.fill();
+      // Inner canopy highlight (variance based on seed)
+      const off = (ob.seed - 0.5) * ob.r * 0.3;
+      ctx.fillStyle = isSnow ? '#3a5438' : '#3e5a2f';
+      ctx.beginPath();
+      ctx.arc(ob.x + off * 0.7, ob.y - off * 0.5, ob.r * 0.7, 0, TAU);
+      ctx.fill();
+      if (isSnow) {
+        // Snow dusting on top
+        ctx.fillStyle = 'rgba(240, 248, 252, 0.85)';
+        ctx.beginPath();
+        ctx.arc(ob.x - off * 0.3, ob.y - ob.r * 0.3, ob.r * 0.55, 0, TAU);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#4e6f3b';
+        ctx.beginPath();
+        ctx.arc(ob.x - off * 0.4, ob.y + off * 0.3, ob.r * 0.35, 0, TAU);
+        ctx.fill();
+      }
+      // Trunk peek
+      ctx.fillStyle = '#2a1e14';
+      ctx.beginPath();
+      ctx.arc(ob.x, ob.y, 3 / Math.max(0.4, S.zoom * 0.8), 0, TAU);
+      ctx.fill();
+    } else if (ob.kind === 'building') {
+      const side = ob.r * 1.5, half = side / 2;
+      const tall = (ob.h - 60) / 54; // 0..1
+      // Drop shadow (bigger for taller buildings)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillRect(ob.x - half + 6 + tall * 6, ob.y - half + 6 + tall * 6, side, side);
+      // Walls
+      ctx.fillStyle = tall > 0.6 ? '#5a5a62' : tall > 0.3 ? '#55504c' : '#4c4a46';
+      ctx.fillRect(ob.x - half, ob.y - half, side, side);
+      // Roof inset
+      const inset = 6;
+      ctx.fillStyle = tall > 0.6 ? '#6c6c74' : tall > 0.3 ? '#66605a' : '#5c5a54';
+      ctx.fillRect(ob.x - half + inset, ob.y - half + inset, side - inset * 2, side - inset * 2);
+      // Rooftop detail: vents / AC units
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      const n = 1 + Math.floor(ob.seed * 3);
+      for (let i = 0; i < n; i++) {
+        const ux = ob.x - half + inset + 8 + ((ob.seed * 7 + i * 3.7) % 1) * (side - inset * 2 - 24);
+        const uy = ob.y - half + inset + 8 + ((ob.seed * 13 + i * 5.3) % 1) * (side - inset * 2 - 24);
+        ctx.fillRect(ux, uy, 10, 8);
+      }
+      // Edge
+      ctx.strokeStyle = '#26262a';
+      ctx.lineWidth = 1.5 / S.zoom;
+      ctx.strokeRect(ob.x - half, ob.y - half, side, side);
+    } else {
+      // Rock
+      ctx.fillStyle = '#4a4238';
+      ctx.beginPath();
+      ctx.arc(ob.x, ob.y, ob.r, 0, TAU);
+      ctx.fill();
+      // Faceted highlight
+      ctx.fillStyle = '#5a5248';
+      const off = ob.r * 0.35;
+      ctx.beginPath();
+      ctx.arc(ob.x - off * (0.5 + ob.seed * 0.3), ob.y - off, ob.r * 0.55, 0, TAU);
+      ctx.fill();
+      // Dark edge
+      ctx.strokeStyle = '#2a241e';
+      ctx.lineWidth = 1.5 / S.zoom;
+      ctx.beginPath();
+      ctx.arc(ob.x, ob.y, ob.r, 0, TAU);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawTank(t) {
+  const sp = t.spec;
+  ctx.save();
+  ctx.translate(t.x, t.y);
+
+  if (!t.alive) {
+    // Burned-out wreck
+    ctx.rotate(t.hullAngle);
+    ctx.fillStyle = '#2a2a24';
+    ctx.fillRect(-sp.size.w / 2, -sp.size.h / 2, sp.size.w, sp.size.h);
+    ctx.strokeStyle = '#1a1a14';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-sp.size.w / 2, -sp.size.h / 2, sp.size.w, sp.size.h);
+    ctx.restore();
+    return;
+  }
+
+  const teamCol = t.team === 'blue' ? COLORS.blue : COLORS.red;
+
+  // Hull
+  ctx.rotate(t.hullAngle);
+  // Treads (lighter sides)
+  ctx.fillStyle = '#1f221c';
+  ctx.fillRect(-sp.size.w / 2 - 3, -sp.size.h / 2, 4, sp.size.h);
+  ctx.fillRect(sp.size.w / 2 - 1, -sp.size.h / 2, 4, sp.size.h);
+  // Tread segments
+  ctx.strokeStyle = '#2f3228';
+  ctx.lineWidth = 0.6;
+  for (let i = 0; i < 6; i++) {
+    const yy = -sp.size.h / 2 + i * (sp.size.h / 5);
+    ctx.beginPath();
+    ctx.moveTo(-sp.size.w / 2 - 3, yy); ctx.lineTo(-sp.size.w / 2 + 1, yy);
+    ctx.moveTo(sp.size.w / 2 - 1, yy); ctx.lineTo(sp.size.w / 2 + 3, yy);
+    ctx.stroke();
+  }
+
+  // Hull body
+  const hitFlash = t.lastHit;
+  ctx.fillStyle = hitFlash > 0.4 ? '#dd6644' : sp.hullCol;
+  ctx.fillRect(-sp.size.w / 2, -sp.size.h / 2, sp.size.w, sp.size.h);
+  ctx.fillStyle = sp.trimCol;
+  ctx.fillRect(-sp.size.w / 2, -sp.size.h / 2, sp.size.w, 2);
+  ctx.fillRect(-sp.size.w / 2, sp.size.h / 2 - 2, sp.size.w, 2);
+  // Front angle indicator (sloped glacis)
+  ctx.beginPath();
+  ctx.moveTo(0, -sp.size.h / 2 - 1);
+  ctx.lineTo(-sp.size.w / 2 + 4, -sp.size.h / 2 + 6);
+  ctx.lineTo(sp.size.w / 2 - 4, -sp.size.h / 2 + 6);
+  ctx.closePath();
+  ctx.fillStyle = sp.trimCol;
+  ctx.fill();
+  // Team band
+  ctx.fillStyle = teamCol;
+  ctx.fillRect(-sp.size.w / 2 + 3, -2, sp.size.w - 6, 4);
+  ctx.restore();
+
+  // Turret (independent rotation)
+  ctx.save();
+  ctx.translate(t.x, t.y);
+  ctx.rotate(t.turretAngle);
+  // Barrel
+  ctx.fillStyle = '#2a2d24';
+  ctx.fillRect(sp.turretSize.h / 2, -sp.barrelWidth / 2, sp.barrelLen - sp.turretSize.h / 2, sp.barrelWidth);
+  // Turret body
+  ctx.fillStyle = hitFlash > 0.4 ? '#ee7755' : sp.turretCol;
+  ctx.fillRect(-sp.turretSize.h / 2, -sp.turretSize.w / 2, sp.turretSize.h, sp.turretSize.w);
+  // Cupola
+  ctx.fillStyle = sp.trimCol;
+  ctx.beginPath();
+  ctx.arc(-sp.turretSize.h / 2 + 4, 0, 4, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+
+  // Nameplate + HP (counter-rotated so always readable in driver view)
+  if (!t.isPlayer || true) {
+    ctx.save();
+    ctx.translate(t.x, t.y);
+    ctx.rotate(Math.PI / 2 + S.cam.angle);
+    const nameY = -22;
+    ctx.font = `${10}px ui-monospace, monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = teamCol;
+    ctx.fillText(t.name, 0, nameY);
+    // HP bar
+    const barW = sp.size.w + 10;
+    const barY = nameY + 7;
+    ctx.fillStyle = 'rgba(13,14,12,0.8)';
+    ctx.fillRect(-barW / 2 - 1, barY - 1, barW + 2, 5);
+    ctx.fillStyle = '#1f221c';
+    ctx.fillRect(-barW / 2, barY, barW, 3);
+    const hpf = clamp(t.hp / t.maxHp, 0, 1);
+    ctx.fillStyle = hpf > 0.5 ? '#6ba35a' : hpf > 0.25 ? '#c9a85a' : '#d46a5a';
+    ctx.fillRect(-barW / 2, barY, barW * hpf, 3);
+    ctx.restore();
+  }
+
+  // Reload indicator over player tank
+  if (t.isPlayer && t.reloadTimer > 0) {
+    ctx.save();
+    ctx.translate(t.x, t.y);
+    const prog = 1 - t.reloadTimer / (t.spec.reloadBase * t.reloadMult);
+    ctx.strokeStyle = COLORS.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, sp.size.w * 0.7, -Math.PI / 2, -Math.PI / 2 + TAU * prog);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawBullet(b) {
+  const spec = b.spec;
+  // Trail
+  if (b.trail.length > 1) {
+    ctx.strokeStyle = spec.tracer;
+    for (let i = 1; i < b.trail.length; i++) {
+      const a = i / b.trail.length;
+      ctx.globalAlpha = a * 0.7;
+      ctx.lineWidth = spec.size * a;
+      ctx.beginPath();
+      ctx.moveTo(b.trail[i - 1].x, b.trail[i - 1].y);
+      ctx.lineTo(b.trail[i].x, b.trail[i].y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Ground shadow for lobbed shells
+  if (b.z > 2) {
+    ctx.fillStyle = `rgba(0, 0, 0, ${clamp(0.4 - b.z / 400, 0.1, 0.4)})`;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, spec.size * 0.9, 0, TAU);
+    ctx.fill();
+  }
+  // Head (grows with altitude so a lob reads as rising toward the camera)
+  const hs = spec.size * (1 + b.z / 90);
+  ctx.fillStyle = spec.color;
+  ctx.beginPath();
+  ctx.arc(b.x - b.z * 0.18, b.y - b.z * 0.18, hs, 0, TAU);
+  ctx.fill();
+  if (spec.luminous) {
+    ctx.fillStyle = 'rgba(140, 255, 170, 0.3)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, spec.size * 2.5, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawMuzzleFlash(e) {
+  const t = 1 - e.life / e.maxLife;
+  if (t <= 0) return;
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  ctx.rotate(e.a);
+  const scale = e.s * (0.7 + 0.3 * t);
+  ctx.fillStyle = `rgba(255, 220, 150, ${t})`;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(26 * scale, -8 * scale);
+  ctx.lineTo(34 * scale, 0);
+  ctx.lineTo(26 * scale, 8 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = `rgba(255, 255, 220, ${t * 0.9})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, 7 * scale, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSpark(e) {
+  const t = 1 - e.life / e.maxLife;
+  ctx.fillStyle = e.ricochet ? `rgba(220, 220, 255, ${t})` : `rgba(255, 200, 120, ${t})`;
+  for (const p of e.particles) {
+    ctx.fillRect(e.x + p.x - 1, e.y + p.y - 1, 2, 2);
+  }
+}
+
+function drawExplosion(e) {
+  const t = e.life / e.maxLife;
+  const r = e.radius * (0.3 + t * 0.9);
+  const grd = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r);
+  grd.addColorStop(0, `rgba(255, 240, 200, ${(1 - t) * 0.9})`);
+  grd.addColorStop(0.4, `rgba(255, 140, 60, ${(1 - t) * 0.7})`);
+  grd.addColorStop(1, 'rgba(255, 60, 20, 0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, r, 0, TAU);
+  ctx.fill();
+  // Ring
+  ctx.strokeStyle = `rgba(255, 200, 120, ${(1 - t) * 0.6})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, r * 0.85, 0, TAU);
+  ctx.stroke();
+}
+
+function drawSmoke(e) {
+  const t = e.life / e.maxLife;
+  const a = (1 - t) * 0.5;
+  ctx.fillStyle = `rgba(80, 80, 70, ${a})`;
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.radius, 0, TAU);
+  ctx.fill();
+}
+
+function drawAirdrops() {
+  for (const a of S.airdrops) {
+    const teamCol = a.team === 'blue' ? COLORS.blue : COLORS.red;
+    // Shadow on ground
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 20, 0, TAU);
+    ctx.fill();
+    if (!a.landed) {
+      // Parachute above
+      const z = a.z;
+      ctx.save();
+      ctx.translate(a.x, a.y - z * 0.5);
+      // Chute
+      ctx.fillStyle = '#c9a85a';
+      ctx.beginPath();
+      ctx.moveTo(-20, 0); ctx.quadraticCurveTo(0, -16, 20, 0); ctx.closePath();
+      ctx.fill();
+      // Lines
+      ctx.strokeStyle = '#2a2a24';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-18, 0); ctx.lineTo(-5, 14);
+      ctx.moveTo(18, 0); ctx.lineTo(5, 14);
+      ctx.stroke();
+      // Crate
+      ctx.fillStyle = '#5a4a2a';
+      ctx.fillRect(-8, 14, 16, 14);
+      ctx.strokeStyle = teamCol;
+      ctx.strokeRect(-8, 14, 16, 14);
+      ctx.restore();
+    } else {
+      // Crate on ground
+      ctx.fillStyle = '#5a4a2a';
+      ctx.fillRect(a.x - 12, a.y - 12, 24, 24);
+      ctx.strokeStyle = teamCol;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(a.x - 12, a.y - 12, 24, 24);
+      ctx.fillStyle = teamCol;
+      ctx.font = 'bold 10px ui-monospace, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('SUP', a.x, a.y);
+    }
+  }
+}
+
+/* ============== MAP VIEW ============== */
+
+function renderMapView() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const scale = Math.min(w / WORLD_W, h / WORLD_H) * 0.9;
+  const ox = (w - WORLD_W * scale) / 2;
+  const oy = (h - WORLD_H * scale) / 2;
+
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+
+  // Background matches current map
+  const M = S.mapSpec || MAPS.FOREST;
+  ctx.fillStyle = M.groundDark;
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+  // Grid
+  ctx.strokeStyle = M.grid;
+  ctx.lineWidth = 1 / scale;
+  for (let x = 0; x <= WORLD_W; x += 400) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_H); ctx.stroke();
+  }
+  for (let y = 0; y <= WORLD_H; y += 400) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_W, y); ctx.stroke();
+  }
+
+  // Hills (visible rounded elevation)
+  for (const h of S.hills) {
+    const grd = ctx.createRadialGradient(h.x, h.y, h.r * 0.1, h.x, h.y, h.r);
+    grd.addColorStop(0, M.hillTint);
+    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = M.hillRim;
+    ctx.lineWidth = 3 / scale;
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.r * 0.95, 0, TAU); ctx.stroke();
+  }
+
+  // Pits (concealment zones)
+  for (const p of S.pits) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.lineWidth = 2 / scale;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.85, 0, TAU); ctx.stroke();
+  }
+
+  // Ice patches
+  for (const p of S.ice) {
+    ctx.fillStyle = 'rgba(220, 240, 255, 0.6)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(120, 160, 200, 0.6)';
+    ctx.lineWidth = 2 / scale;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.stroke();
+  }
+
+  // Border
+  ctx.strokeStyle = M.border;
+  ctx.lineWidth = 4 / scale;
+  ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+
+  // Bases
+  for (const base of [BLUE_BASE, RED_BASE]) {
+    const isBlue = base.team === 'blue';
+    ctx.fillStyle = isBlue ? COLORS.blueBase : COLORS.redBase;
+    ctx.beginPath();
+    ctx.arc(base.x, base.y, base.r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = isBlue ? COLORS.blueBaseEdge : COLORS.redBaseEdge;
+    ctx.lineWidth = 4 / scale;
+    ctx.stroke();
+    ctx.fillStyle = isBlue ? COLORS.blue : COLORS.red;
+    ctx.font = `bold ${60}px 'Arial Narrow', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(isBlue ? 'BLUE' : 'RED', base.x, base.y);
+  }
+
+  // Obstacles (tree, rock, or building)
+  for (const ob of S.obstacles) {
+    if (ob.kind === 'building') {
+      ctx.fillStyle = '#5a5a62';
+      ctx.fillRect(ob.x - ob.r * 0.75, ob.y - ob.r * 0.75, ob.r * 1.5, ob.r * 1.5);
+      continue;
+    }
+    ctx.fillStyle = ob.kind === 'tree' ? '#3e5a2f' : '#4a4238';
+    ctx.beginPath(); ctx.arc(ob.x, ob.y, ob.r, 0, TAU); ctx.fill();
+  }
+
+  // Tanks (friendly always visible, enemies if spotted)
+  for (const t of S.tanks) {
+    if (!t.alive) continue;
+    const isPlayer = t.isPlayer;
+    const friendly = t.team === 'blue';
+    const spotted = !friendly && (S.playerSpotted.get(t.id) || 0) > S.time;
+    if (!friendly && !spotted) continue;
+
+    const col = friendly ? COLORS.blue : COLORS.red;
+    const r = isPlayer ? 32 : 22;
+    ctx.save();
+    ctx.translate(t.x, t.y);
+    ctx.rotate(t.hullAngle);
+    ctx.fillStyle = col;
+    ctx.fillRect(-r, -r * 0.7, r * 2, r * 1.4);
+    ctx.fillStyle = isPlayer ? '#ffffff' : col;
+    ctx.rotate(t.turretAngle - t.hullAngle);
+    ctx.fillRect(-r * 0.3, -r * 0.3, r * 1.2, r * 0.6);
+    ctx.restore();
+    if (isPlayer) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3 / scale;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 50, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  // Airdrops
+  for (const a of S.airdrops) {
+    const teamCol = a.team === 'blue' ? COLORS.blue : COLORS.red;
+    ctx.fillStyle = teamCol;
+    ctx.fillRect(a.x - 16, a.y - 16, 32, 32);
+  }
+
+  // Smoke (spy mode only — the live game draws its own smoke in the world pass)
+  if (S.mode === 'spy') for (const sm of S.smokeScreens) {
+    ctx.fillStyle = 'rgba(220, 220, 220, 0.45)';
+    ctx.beginPath(); ctx.arc(sm.x, sm.y, 70, 0, TAU); ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Map header
+  ctx.fillStyle = COLORS.hudBg;
+  ctx.fillRect(0, 0, w, 44);
+  ctx.strokeStyle = COLORS.hudBorder;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, 44); ctx.lineTo(w, 44); ctx.stroke();
+  ctx.fillStyle = COLORS.accent;
+  ctx.font = 'bold 16px "Arial Narrow", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(S.mode === 'spy' ? 'COMPANION MAP — LIVE' : 'TACTICAL MAP', w / 2, 22);
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillText(S.mode === 'spy' ? (S.mapSpec ? S.mapSpec.name : '') + ' · mirrored from your other device' : 'tap MAP again to return to tank view', w / 2, 38);
+}
+
+/* ============== COMPANION (SPY) VIEW ============== */
+
+function renderSpyView() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const have = Link.applyRemote();
+  const stale = have && (Date.now() - Link.remoteAt > 4000);
+  if (have) {
+    renderMapView();
+    // HP bars over spy tanks are not drawn by renderMapView; add a scoreboard + host HP
+    const rm = Link.remote;
+    ctx.fillStyle = COLORS.hudBg;
+    ctx.fillRect(w / 2 - 110, 48, 220, 30);
+    ctx.strokeStyle = COLORS.hudBorder; ctx.lineWidth = 1;
+    ctx.strokeRect(w / 2 - 110, 48, 220, 30);
+    ctx.font = 'bold 16px ui-monospace, monospace';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right'; ctx.fillStyle = COLORS.blue; ctx.fillText(String(S.scoreBlue), w / 2 - 14, 63);
+    ctx.textAlign = 'center'; ctx.fillStyle = COLORS.textDim; ctx.fillText(':', w / 2, 63);
+    ctx.textAlign = 'left'; ctx.fillStyle = COLORS.red; ctx.fillText(String(S.scoreRed), w / 2 + 14, 63);
+    // Host HP
+    if (rm && rm.mhp) {
+      const frac = clamp(rm.hp / rm.mhp, 0, 1);
+      ctx.fillStyle = COLORS.hudBg;
+      ctx.fillRect(12, h - 40, 160, 28);
+      ctx.strokeStyle = COLORS.hudBorder; ctx.strokeRect(12, h - 40, 160, 28);
+      ctx.fillStyle = frac > 0.5 ? COLORS.ok : frac > 0.25 ? COLORS.accent : COLORS.warn;
+      ctx.fillRect(18, h - 34, 148 * frac, 16);
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 10px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('COMMANDER HP ' + rm.hp + '/' + rm.mhp, 92, h - 26);
+    }
+    // Enemy count spotted
+    const spotted = S.tanks.filter(t => t.team === 'red' && t.alive && S.playerSpotted.has(t.id)).length;
+    ctx.fillStyle = COLORS.hudBg; ctx.fillRect(w - 172, h - 40, 160, 28);
+    ctx.strokeStyle = COLORS.hudBorder; ctx.strokeRect(w - 172, h - 40, 160, 28);
+    ctx.fillStyle = spotted ? COLORS.red : COLORS.textDim;
+    ctx.font = 'bold 10px ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.fillText(spotted ? spotted + ' ENEMY CONTACT' + (spotted > 1 ? 'S' : '') : 'NO CONTACTS', w - 92, h - 26);
+    if (S.playerInCover) { ctx.fillStyle = COLORS.blue; ctx.fillText('IN COVER', w / 2, h - 26); }
+    if (stale) {
+      ctx.fillStyle = 'rgba(13, 14, 12, 0.6)'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = COLORS.warn; ctx.font = 'bold 18px "Arial Narrow", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('SIGNAL LOST — waiting for the game to resume', w / 2, h / 2);
+    }
+  } else {
+    // Waiting screen
+    ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.accent;
+    ctx.font = 'bold 22px "Arial Narrow", sans-serif';
+    ctx.fillText('COMPANION MAP', w / 2, h / 2 - 50);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = '13px ui-monospace, monospace';
+    let msg;
+    if (!Link.tried || (!Link.room && !Link.connected && Date.now() - (Link.enterAt || 0) < 10000)) msg = 'Connecting…';
+    else if (!Link.room) msg = 'Live link unavailable on this device. Open the game from its claude.ai link while signed in.';
+    else if (!Link.connected) msg = 'Connecting to the room…';
+    else msg = 'Linked. Waiting for a game to start on your other device.';
+    // wrap at ~44 chars
+    const words = msg.split(' '); let line = '', y = h / 2 - 16;
+    for (const wd of words) {
+      if ((line + ' ' + wd).trim().length > 44) { ctx.fillText(line.trim(), w / 2, y); y += 18; line = wd; }
+      else line += ' ' + wd;
+    }
+    ctx.fillText(line.trim(), w / 2, y);
+    ctx.fillStyle = COLORS.textDim;
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.fillText('Tap DEPLOY on the playing device. Map updates ~8× per second.', w / 2, y + 36);
+    // Pulsing radar ring
+    const ph = (Date.now() % 2000) / 2000;
+    ctx.strokeStyle = `rgba(201, 168, 90, ${1 - ph})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(w / 2, h / 2 - 110, 10 + ph * 40, 0, TAU); ctx.stroke();
+    ctx.fillStyle = COLORS.accent;
+    ctx.beginPath(); ctx.arc(w / 2, h / 2 - 110, 4, 0, TAU); ctx.fill();
+  }
+}
+
+/* ============== HUD ============== */
+
+// Draw a small house icon
+function drawHouseIcon(cx, cy, size, color) {
+  const sz = size;
+  ctx.fillStyle = color;
+  // walls
+  ctx.fillRect(cx - sz * 0.4, cy - sz * 0.1, sz * 0.8, sz * 0.5);
+  // roof
+  ctx.beginPath();
+  ctx.moveTo(cx - sz * 0.5, cy - sz * 0.1);
+  ctx.lineTo(cx, cy - sz * 0.55);
+  ctx.lineTo(cx + sz * 0.5, cy - sz * 0.1);
+  ctx.closePath();
+  ctx.fill();
+  // door (dark)
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(cx - sz * 0.1, cy + sz * 0.14, sz * 0.2, sz * 0.26);
+}
+
+// Render the tactical minimap into a given viewport (mx, my, mmW, mmH)
+function renderTacticalMinimap(mx, my, mmW, mmH) {
+  const scaleX = mmW / WORLD_W, scaleY = mmH / WORLD_H;
+  const scale = Math.min(scaleX, scaleY);
+
+  // Background
+  ctx.fillStyle = COLORS.hudBg;
+  ctx.fillRect(mx, my, mmW, mmH);
+  ctx.strokeStyle = COLORS.hudBorder;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx, my, mmW, mmH);
+  // Clip within panel
+  ctx.save();
+  ctx.beginPath(); ctx.rect(mx, my, mmW, mmH); ctx.clip();
+
+  // Hills (faint)
+  const M = S.mapSpec || MAPS.FOREST;
+  ctx.fillStyle = M.hillTint;
+  for (const h of S.hills) {
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.arc(mx + h.x * scaleX, my + h.y * scaleY, Math.max(2, h.r * scale * 0.9), 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Pits (dark)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  for (const p of S.pits) {
+    ctx.beginPath();
+    ctx.arc(mx + p.x * scaleX, my + p.y * scaleY, Math.max(1.5, p.r * scale * 0.9), 0, TAU);
+    ctx.fill();
+  }
+  // Ice (cyan)
+  ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
+  for (const p of S.ice) {
+    ctx.beginPath();
+    ctx.arc(mx + p.x * scaleX, my + p.y * scaleY, Math.max(1.5, p.r * scale * 0.9), 0, TAU);
+    ctx.fill();
+  }
+  // Obstacles (tiny)
+  ctx.fillStyle = '#4a4238';
+  for (const ob of S.obstacles) {
+    if (ob.kind === 'building') {
+      const sz = Math.max(2, ob.r * scale * 1.3);
+      ctx.fillRect(mx + ob.x * scaleX - sz / 2, my + ob.y * scaleY - sz / 2, sz, sz);
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(mx + ob.x * scaleX, my + ob.y * scaleY, Math.max(1, ob.r * scale * 0.8), 0, TAU);
+    ctx.fill();
+  }
+
+  // Base zones (light rings)
+  for (const base of [BLUE_BASE, RED_BASE]) {
+    const isBlue = base.team === 'blue';
+    ctx.strokeStyle = isBlue ? COLORS.blueBaseEdge : COLORS.redBaseEdge;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mx + base.x * scaleX, my + base.y * scaleY, base.r * scale, 0, TAU);
+    ctx.stroke();
+  }
+
+  // Houses for both bases
+  const houseSize = Math.max(10, Math.min(16, mmW * 0.08));
+  drawHouseIcon(mx + BLUE_BASE.x * scaleX, my + BLUE_BASE.y * scaleY, houseSize, COLORS.blue);
+  drawHouseIcon(mx + RED_BASE.x * scaleX,  my + RED_BASE.y * scaleY,  houseSize, COLORS.red);
+
+  // Airdrops (yellow dots)
+  for (const a of S.airdrops) {
+    ctx.fillStyle = a.kind === 'medic' ? '#88ff88' : '#c9a85a';
+    const ax = mx + a.x * scaleX, ay = my + a.y * scaleY;
+    ctx.fillRect(ax - 2, ay - 2, 4, 4);
+  }
+
+  // Smoke screens (grey faint)
+  ctx.fillStyle = 'rgba(170, 170, 165, 0.5)';
+  for (const s of S.smokeScreens) {
+    ctx.beginPath();
+    ctx.arc(mx + s.x * scaleX, my + s.y * scaleY, Math.max(2, s.r * scale * 0.8), 0, TAU);
+    ctx.fill();
+  }
+
+  // Tanks
+  for (const t of S.tanks) {
+    if (!t.alive) continue;
+    const friendly = t.team === 'blue';
+    const spotted = !friendly && (S.playerSpotted.get(t.id) || 0) > S.time;
+    if (!friendly && !spotted) continue;
+    const tx = mx + t.x * scaleX, ty = my + t.y * scaleY;
+    if (t.isPlayer) {
+      // Player: white arrow showing hull direction
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(t.hullAngle);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(6, 0);
+      ctx.lineTo(-4, -4);
+      ctx.lineTo(-2, 0);
+      ctx.lineTo(-4, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // Range ring (sight)
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.beginPath();
+      ctx.arc(tx, ty, t.spec.sight * scale, 0, TAU);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = friendly ? COLORS.blue : COLORS.red;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Title bar
+  ctx.fillStyle = 'rgba(13,14,12,0.75)';
+  ctx.fillRect(mx, my, mmW, 14);
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '8px ui-monospace, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('RADAR', mx + 6, my + 7);
+
+  ctx.restore();
+}
+
+// Render a mini driver-view preview (top-down zoomed around player)
+function renderMiniDriverView(mx, my, mmW, mmH) {
+  const p = S.player;
+  if (!p) {
+    ctx.fillStyle = COLORS.hudBg;
+    ctx.fillRect(mx, my, mmW, mmH);
+    return;
+  }
+  // Save, clip to this box, render a mini top-down centered on the player
+  ctx.save();
+  ctx.beginPath(); ctx.rect(mx, my, mmW, mmH); ctx.clip();
+
+  // Background matches map
+  const M = S.mapSpec || MAPS.FOREST;
+  ctx.fillStyle = M.ground;
+  ctx.fillRect(mx, my, mmW, mmH);
+
+  // Draw world around player — rotate so hull points up, like the main driver view
+  const miniZoom = Math.max(0.6, Math.min(mmW, mmH) / 350);
+  const cx = mx + mmW / 2, cy = my + mmH * 0.6;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(miniZoom, miniZoom);
+  ctx.rotate(-(Math.PI / 2 + S.cam.angle));
+  ctx.translate(-p.x, -p.y);
+  const viewR = Math.max(mmW, mmH) / miniZoom;
+  const vl = p.x - viewR, vr = p.x + viewR, vt = p.y - viewR, vb = p.y + viewR;
+  // Terrain
+  drawHills(vl, vr, vt, vb);
+  drawPits(vl, vr, vt, vb);
+  drawIce(vl, vr, vt, vb);
+  drawObstacles(vl, vr, vt, vb);
+  // Tanks
+  for (const t of S.tanks) {
+    if (!t.alive) continue;
+    const friendly = t.team === 'blue';
+    const spotted = !friendly && (S.playerSpotted.get(t.id) || 0) > S.time;
+    if (!friendly && !t.isPlayer && !spotted) continue;
+    drawTank(t);
+  }
+  // Smoke
+  drawSmokeScreens(vl, vr, vt, vb);
+  ctx.restore();
+
+  // Border + title
+  ctx.strokeStyle = COLORS.hudBorder;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx, my, mmW, mmH);
+  ctx.fillStyle = 'rgba(13,14,12,0.75)';
+  ctx.fillRect(mx, my, mmW, 14);
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '8px ui-monospace, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('DRIVER', mx + 6, my + 7);
+
+  ctx.restore();
+}
+
+// Compute mini-view size + position (avoids scoreboard + right button column + HUD)
+function getMiniViewRect() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const mmW = clamp(w * 0.28, 118, 180);
+  const mmH = mmW * 0.72;
+  // Portrait phone or very narrow: put at bottom-right above the fire button
+  if (w < 500 || (h > w && w < 700)) {
+    return { x: w - mmW - 10, y: h - mmH - 170, w: mmW, h: mmH };
+  }
+  // Landscape / tablet / desktop: top-right, below scoreboard, left of button column
+  return { x: w - mmW - 76, y: 54, w: mmW, h: mmH };
+}
+
+// Legacy name kept for any callsite — do nothing (mini is drawn in render())
+function drawMinimap() {}
+
+function renderHUD() {
+  if (S.mode === 'spy') return;
+  const w = window.innerWidth, h = window.innerHeight;
+  const p = S.player;
+
+  if (!p) return;
+
+  // --- Top-center scoreboard ---
+  const sbW = 220, sbH = 36;
+  const sbX = w / 2 - sbW / 2;
+  const sbY = 10;
+  ctx.fillStyle = COLORS.hudBg;
+  ctx.fillRect(sbX, sbY, sbW, sbH);
+  ctx.strokeStyle = COLORS.hudBorder;
+  ctx.strokeRect(sbX, sbY, sbW, sbH);
+  // Blue
+  ctx.fillStyle = COLORS.blue;
+  ctx.font = 'bold 18px "Arial Narrow", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('BLU', sbX + 10, sbY + sbH / 2);
+  ctx.fillStyle = COLORS.text;
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 18px ui-monospace, monospace';
+  ctx.fillText(String(S.scoreBlue), sbX + 46, sbY + sbH / 2);
+  // Separator
+  ctx.fillStyle = COLORS.textDim;
+  ctx.textAlign = 'center';
+  ctx.fillText('/', sbX + sbW / 2, sbY + sbH / 2);
+  // Red
+  ctx.fillStyle = COLORS.text;
+  ctx.textAlign = 'right';
+  ctx.fillText(String(S.scoreRed), sbX + sbW - 48, sbY + sbH / 2);
+  ctx.fillStyle = COLORS.red;
+  ctx.font = 'bold 18px "Arial Narrow", sans-serif';
+  ctx.fillText('RED', sbX + sbW - 10, sbY + sbH / 2);
+  // Win cap
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '9px ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('FIRST TO ' + S.winScore, sbX + sbW / 2, sbY + sbH + 8);
+
+  // --- Bottom-left: HP, speed, gear, ammo ---
+  const hudX = 10;
+  const hudY = h - 150;
+  const hudW = 220, hudH = 100;
+  ctx.fillStyle = COLORS.hudBg;
+  ctx.fillRect(hudX, hudY, hudW, hudH);
+  ctx.strokeStyle = COLORS.hudBorder;
+  ctx.strokeRect(hudX, hudY, hudW, hudH);
+
+  // Tank name
+  ctx.fillStyle = COLORS.accent;
+  ctx.font = 'bold 11px "Arial Narrow", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(p.spec.name, hudX + 10, hudY + 8);
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText('CLASS', hudX + 60, hudY + 10);
+
+  // HP bar
+  const barX = hudX + 10, barY = hudY + 24;
+  const barW = hudW - 20;
+  ctx.fillStyle = '#1f221c';
+  ctx.fillRect(barX, barY, barW, 10);
+  const hpf = clamp(p.hp / p.maxHp, 0, 1);
+  ctx.fillStyle = hpf > 0.5 ? COLORS.ok : hpf > 0.25 ? COLORS.accent : COLORS.warn;
+  ctx.fillRect(barX, barY, barW * hpf, 10);
+  ctx.fillStyle = COLORS.text;
+  ctx.font = 'bold 9px ui-monospace, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('HP ' + Math.max(0, Math.round(p.hp)) + '/' + p.maxHp, barX + 4, barY + 1);
+
+  // Gear + speed
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText('GEAR', hudX + 10, hudY + 40);
+  ctx.fillText('SPEED', hudX + 70, hudY + 40);
+  ctx.fillStyle = COLORS.accent;
+  ctx.font = 'bold 14px ui-monospace, monospace';
+  const gearLabel = p.targetGear < 0 ? 'R' : String(p.targetGear);
+  ctx.fillText(gearLabel, hudX + 10, hudY + 50);
+  ctx.fillStyle = COLORS.text;
+  ctx.fillText(Math.round(p.speed) + '', hudX + 70, hudY + 50);
+
+  // Reload
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText('RELOAD', hudX + 130, hudY + 40);
+  const actualReload = p.spec.reloadBase * p.reloadMult;
+  const reloadFrac = p.reloadTimer > 0 ? (p.reloadTimer / actualReload) : 0;
+  const rlX = hudX + 130, rlY = hudY + 54, rlW = 70;
+  ctx.fillStyle = '#1f221c';
+  ctx.fillRect(rlX, rlY, rlW, 6);
+  ctx.fillStyle = reloadFrac > 0 ? COLORS.warn : COLORS.ok;
+  ctx.fillRect(rlX, rlY, rlW * (1 - reloadFrac), 6);
+
+  // Ammo totals under HUD
+  const ammoY = hudY + 70;
+  ctx.fillStyle = COLORS.textDim;
+  ctx.font = '9px ui-monospace, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('LOADOUT', hudX + 10, ammoY);
+  const abx = hudX + 10, aby = ammoY + 12;
+  const bw = 46;
+  for (let i = 0; i < AMMO_ORDER.length; i++) {
+    const k = AMMO_ORDER[i];
+    const sel = p.selectedAmmo === k;
+    const x = abx + i * (bw + 2);
+    ctx.fillStyle = sel ? COLORS.accent : '#1f221c';
+    ctx.fillRect(x, aby, bw, 14);
+    ctx.fillStyle = sel ? '#0d0e0c' : COLORS.text;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 9px ui-monospace, monospace';
+    ctx.fillText(AMMO[k].name + ' ' + p.ammo[k], x + bw / 2, aby + 7);
+  }
+
+  // --- Ammo quick-select buttons on larger screens ---
+  // Already drawn as buttons
+
+  // --- Buttons (map, zoom, supply, medic, smoke, gyro, ammo) ---
+  for (const b of Input.buttons) {
+    const activeAmmo = b.action === 'ammo' && p.selectedAmmo === b.ammo;
+    const gyroActive = b.action === 'gyro' && Gyro.enabled;
+    const muted = b.action === 'mute' && !Sound.enabled;
+    const voiceOn = b.action === 'voice' && Voice.wanted;
+    const highlighted = activeAmmo || gyroActive || muted || voiceOn;
+    ctx.fillStyle = highlighted ? 'rgba(201, 168, 90, 0.2)' : COLORS.hudBg;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = highlighted ? COLORS.accent : COLORS.hudBorder;
+    ctx.lineWidth = highlighted ? 2 : 1.5;
+    ctx.stroke();
+    ctx.fillStyle = highlighted ? COLORS.accent : COLORS.text;
+    ctx.font = 'bold ' + (b.r > 20 ? 11 : 9) + 'px "Arial Narrow", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, b.x, b.y);
+  }
+  // Request cooldown indicators
+  function drawCooldownRing(action, cooldown, max) {
+    if (cooldown <= 0) return;
+    const btn = Input.buttons.find(b => b.action === action);
+    if (!btn) return;
+    ctx.strokeStyle = COLORS.warn;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(btn.x, btn.y, btn.r + 3, -Math.PI / 2, -Math.PI / 2 + TAU * (cooldown / max));
+    ctx.stroke();
+  }
+  drawCooldownRing('supply', S.airdropCooldown, 30);
+  drawCooldownRing('medic',  S.medicCooldown,   45);
+  drawCooldownRing('smoke',  S.smokeCooldown,   25);
+
+  // Voice: listening dot + last command heard
+  if (Voice.wanted) {
+    const vb = Input.buttons.find(b => b.action === 'voice');
+    if (vb) {
+      const pulse = 0.5 + 0.5 * Math.sin(S.time * 6);
+      ctx.fillStyle = Voice.on ? `rgba(212, 106, 90, ${0.5 + pulse * 0.5})` : COLORS.textDim;
+      ctx.beginPath(); ctx.arc(vb.x + 13, vb.y - 13, 4, 0, TAU); ctx.fill();
+    }
+    if (S.time - Voice.lastAt < 1.6 && Voice.lastHeard) {
+      ctx.fillStyle = `rgba(201, 168, 90, ${clamp(1.6 - (S.time - Voice.lastAt), 0, 1)})`;
+      ctx.font = 'bold 11px ui-monospace, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('🎙 ' + Voice.lastHeard, w / 2, 100);
+    }
+  }
+
+  // Cover indicator
+  if (S.playerInCover) {
+    const cx = w / 2, cy = 70;
+    ctx.fillStyle = 'rgba(90, 154, 212, 0.15)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = COLORS.blue;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, TAU);
+    ctx.stroke();
+    // Shield glyph
+    ctx.fillStyle = COLORS.blue;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 10);
+    ctx.lineTo(cx + 8, cy - 6);
+    ctx.lineTo(cx + 8, cy + 2);
+    ctx.quadraticCurveTo(cx + 8, cy + 8, cx, cy + 10);
+    ctx.quadraticCurveTo(cx - 8, cy + 8, cx - 8, cy + 2);
+    ctx.lineTo(cx - 8, cy - 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = '8px ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('COVER', cx, cy + 26);
+  }
+
+  // --- Elevation slider (gun elevation / lob distance) ---
+  if (Input.elevSlider && p.alive) {
+    const es = Input.elevSlider;
+    const sh = es.bottom - es.top;
+    ctx.fillStyle = COLORS.hudBg;
+    ctx.fillRect(es.x - 11, es.top - 4, 22, sh + 8);
+    ctx.strokeStyle = Input.elevTouch.active ? COLORS.accent : COLORS.hudBorder;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(es.x - 11, es.top - 4, 22, sh + 8);
+    // Fill from bottom
+    const fillH = sh * p.elevation;
+    ctx.fillStyle = p.elevation > 0.02 ? 'rgba(201, 168, 90, 0.35)' : 'rgba(107, 114, 102, 0.25)';
+    ctx.fillRect(es.x - 8, es.bottom - fillH, 16, fillH);
+    // Ticks
+    ctx.strokeStyle = '#3a3f36';
+    ctx.beginPath();
+    for (let i = 1; i < 4; i++) { const ty = es.bottom - sh * i / 4; ctx.moveTo(es.x - 8, ty); ctx.lineTo(es.x + 8, ty); }
+    ctx.stroke();
+    // Knob
+    const ky = es.bottom - fillH;
+    ctx.fillStyle = p.elevation > 0.02 ? COLORS.accent : COLORS.textDim;
+    ctx.beginPath();
+    ctx.arc(es.x, ky, 9, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = COLORS.textDim;
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('ELEV', es.x, es.top - 7);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = p.elevation > 0.02 ? COLORS.accent : COLORS.textDim;
+    ctx.fillText(p.elevation > 0.02 ? 'LOB' : 'DIRECT', es.x, es.bottom + 7);
+  }
+
+  // --- Fire button ---
+  if (Input.fireAnchor) {
+    const canFire = p.reloadTimer <= 0 && p.ammo[p.selectedAmmo] > 0 && p.alive;
+    ctx.fillStyle = canFire ? (Input.fireHeld ? '#d46a5a' : COLORS.hudBg) : COLORS.hudBg;
+    ctx.beginPath();
+    ctx.arc(Input.fireAnchor.x, Input.fireAnchor.y, Input.fireAnchor.r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = canFire ? COLORS.warn : COLORS.textDim;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Reload progress ring
+    if (p.reloadTimer > 0) {
+      ctx.strokeStyle = COLORS.accent;
+      ctx.lineWidth = 3;
+      const frac = 1 - p.reloadTimer / (p.spec.reloadBase * p.reloadMult);
+      ctx.beginPath();
+      ctx.arc(Input.fireAnchor.x, Input.fireAnchor.y, Input.fireAnchor.r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * frac);
+      ctx.stroke();
+    }
+    ctx.fillStyle = canFire ? COLORS.warn : COLORS.textDim;
+    ctx.font = 'bold 14px "Arial Narrow", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('FIRE', Input.fireAnchor.x, Input.fireAnchor.y);
+  }
+
+  // --- Left joystick visualization ---
+  if (Input.joyAnchorL) {
+    ctx.fillStyle = 'rgba(13, 14, 12, 0.55)';
+    ctx.beginPath();
+    ctx.arc(Input.joyAnchorL.x, Input.joyAnchorL.y, JOY_RADIUS, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = COLORS.hudBorder;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Gear indicator (notches)
+    ctx.strokeStyle = COLORS.textDim;
+    ctx.lineWidth = 1;
+    for (let g = -1; g <= 3; g++) {
+      if (g === 0) continue;
+      const fy = g === -1 ? 0.7 : -g / 3 * 0.75;
+      const yy = Input.joyAnchorL.y + fy * JOY_RADIUS;
+      ctx.beginPath();
+      ctx.moveTo(Input.joyAnchorL.x - 6, yy);
+      ctx.lineTo(Input.joyAnchorL.x + 6, yy);
+      ctx.stroke();
+    }
+    // Current gear marker
+    const curY = p.targetGear === 0 ? Input.joyAnchorL.y :
+      p.targetGear === -1 ? Input.joyAnchorL.y + 0.7 * JOY_RADIUS :
+      Input.joyAnchorL.y - (p.targetGear / 3) * 0.75 * JOY_RADIUS;
+    ctx.fillStyle = COLORS.accent;
+    ctx.fillRect(Input.joyAnchorL.x - 10, curY - 1.5, 20, 3);
+
+    // Stick position
+    let sx = Input.joyAnchorL.x, sy = Input.joyAnchorL.y;
+    if (Input.joyL.active) {
+      const dx = Input.joyL.x - Input.joyAnchorL.x;
+      const dy = Input.joyL.y - Input.joyAnchorL.y;
+      const m = Math.hypot(dx, dy);
+      if (m > JOY_RADIUS) { sx = Input.joyAnchorL.x + dx / m * JOY_RADIUS; sy = Input.joyAnchorL.y + dy / m * JOY_RADIUS; }
+      else { sx = Input.joyL.x; sy = Input.joyL.y; }
+    }
+    ctx.fillStyle = Input.joyL.active ? COLORS.accent : COLORS.textDim;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 18, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(sx - 10, sy - 1, 20, 2);
+    // Label
+    ctx.fillStyle = COLORS.textDim;
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('DRIVE', Input.joyAnchorL.x, Input.joyAnchorL.y + JOY_RADIUS + 6);
+  }
+
+  // --- Aim indicator (barrel line + crosshair where turret is pointed) ---
+  if (p.alive && S.view === 'tank') {
+    const cosT = Math.cos(p.turretTarget), sinT = Math.sin(p.turretTarget);
+    const cosC = Math.cos(p.turretAngle),  sinC = Math.sin(p.turretAngle);
+    // Barrel-forward reticle (where turret currently points)
+    const rangeHit = 450;
+    const retWorld = { x: p.x + cosC * rangeHit, y: p.y + sinC * rangeHit };
+    const retScreen = worldToScreenDriver(retWorld.x, retWorld.y);
+    const ex = retScreen.x, ey = retScreen.y;
+    // Dashed line from the barrel out to the reticle (very subtle)
+    const barrelWorld = { x: p.x + cosC * (p.spec.barrelLen + 4), y: p.y + sinC * (p.spec.barrelLen + 4) };
+    const barrelScreen = worldToScreenDriver(barrelWorld.x, barrelWorld.y);
+    const bx = barrelScreen.x, by = barrelScreen.y;
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = 'rgba(212, 106, 90, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(bx, by); ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Reticle at the aim point (dimmed when lobbing — the landing ring is the real target)
+    ctx.strokeStyle = p.elevation > 0.02 ? 'rgba(212, 106, 90, 0.35)' : COLORS.warn;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 12, 0, TAU);
+    ctx.moveTo(ex - 20, ey); ctx.lineTo(ex - 8, ey);
+    ctx.moveTo(ex + 8, ey);  ctx.lineTo(ex + 20, ey);
+    ctx.moveTo(ex, ey - 20); ctx.lineTo(ex, ey - 8);
+    ctx.moveTo(ex, ey + 8);  ctx.lineTo(ex, ey + 20);
+    ctx.stroke();
+    // Center dot
+    ctx.fillStyle = COLORS.warn;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 2.5, 0, TAU);
+    ctx.fill();
+
+    // Lob landing marker (where an elevated shell comes down)
+    if (p.elevation > 0.02) {
+      const spec = AMMO[p.selectedAmmo];
+      const ld = arcLandDist(p.elevation, spec);
+      const landWorld = { x: p.x + cosC * ld, y: p.y + sinC * ld };
+      const ls = worldToScreenDriver(landWorld.x, landWorld.y);
+      // Arc line from barrel: bulge sideways so it reads as a lob
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = 'rgba(201, 168, 90, 0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      const mxp = (bx + ls.x) / 2, myp = (by + ls.y) / 2;
+      const nx = -(ls.y - by), ny = (ls.x - bx);
+      const nl = Math.hypot(nx, ny) || 1;
+      const bulge = Math.min(60, ld * 0.08 * S.zoom);
+      ctx.moveTo(bx, by);
+      ctx.quadraticCurveTo(mxp + nx / nl * bulge, myp + ny / nl * bulge, ls.x, ls.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Landing ring (HE shows splash radius)
+      const rr = spec.splashR ? spec.splashR * S.zoom : 14;
+      ctx.strokeStyle = COLORS.accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ls.x, ls.y, rr, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ls.x - rr - 6, ls.y); ctx.lineTo(ls.x - rr + 4, ls.y);
+      ctx.moveTo(ls.x + rr - 4, ls.y); ctx.lineTo(ls.x + rr + 6, ls.y);
+      ctx.moveTo(ls.x, ls.y - rr - 6); ctx.lineTo(ls.x, ls.y - rr + 4);
+      ctx.moveTo(ls.x, ls.y + rr - 4); ctx.lineTo(ls.x, ls.y + rr + 6);
+      ctx.stroke();
+      ctx.fillStyle = COLORS.accent;
+      ctx.font = 'bold 9px ui-monospace, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('LOB ' + Math.round(ld) + 'm', ls.x, ls.y + rr + 8);
+    }
+
+    // If turret is still slewing to target, show a smaller ghost reticle at target
+    const off = angleDiff(p.turretAngle, p.turretTarget);
+    if (Math.abs(off) > 0.05) {
+      const targWorld = { x: p.x + cosT * rangeHit, y: p.y + sinT * rangeHit };
+      const targScreen = worldToScreenDriver(targWorld.x, targWorld.y);
+      ctx.strokeStyle = 'rgba(212, 106, 90, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(targScreen.x, targScreen.y, 7, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  // --- Tilt indicator (when gyro on, shows deltas as a small cross) ---
+  if (Gyro.enabled) {
+    const gx = window.innerWidth - 130, gy = window.innerHeight - 172;
+    ctx.fillStyle = 'rgba(13, 14, 12, 0.65)';
+    ctx.fillRect(gx - 22, gy - 22, 44, 44);
+    ctx.strokeStyle = COLORS.hudBorder;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx - 22, gy - 22, 44, 44);
+    // Crosshair in middle
+    ctx.strokeStyle = '#3a3f36';
+    ctx.beginPath();
+    ctx.moveTo(gx - 16, gy); ctx.lineTo(gx + 16, gy);
+    ctx.moveTo(gx, gy - 16); ctx.lineTo(gx, gy + 16);
+    ctx.stroke();
+    // Dot showing tilt
+    const px = gx + clamp(Gyro.dGamma / 25, -1, 1) * 16;
+    const py = gy + clamp(Gyro.dBeta / 25, -1, 1) * 16;
+    ctx.fillStyle = COLORS.accent;
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, TAU);
+    ctx.fill();
+  }
+
+  // --- Message banner ---
+  if (S.message) {
+    const alpha = clamp(S.messageUntil - S.time, 0, 1);
+    ctx.fillStyle = `rgba(13, 14, 12, ${0.75 * alpha})`;
+    ctx.fillRect(w / 2 - 160, h / 2 - 60, 320, 36);
+    ctx.strokeStyle = `rgba(201, 168, 90, ${alpha})`;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(w / 2 - 160, h / 2 - 60, 320, 36);
+    ctx.fillStyle = `rgba(201, 168, 90, ${alpha})`;
+    ctx.font = 'bold 14px "Arial Narrow", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(S.message, w / 2, h / 2 - 42);
+  }
+
+  // --- Death screen overlay ---
+  if (p && !p.alive && p.respawnTimer > 0) {
+    ctx.fillStyle = 'rgba(13, 14, 12, 0.6)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = COLORS.warn;
+    ctx.font = 'bold 32px "Arial Narrow", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('DESTROYED', w / 2, h / 2 - 20);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 20px ui-monospace, monospace';
+    ctx.fillText('RESPAWN ' + Math.ceil(p.respawnTimer) + 's', w / 2, h / 2 + 18);
+  }
+}
+
+/* ============== MAIN LOOP ============== */
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(0.04, (now - lastT) / 1000);
+  lastT = now;
+  if (S.mode === 'play') update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ============== MENU SETUP ============== */
+
+let currentlySelectedTankType = 'MEDIUM';
+let currentlySelectedMap = 'FOREST';
+
+function buildTankSelectUI() {
+  const container = document.getElementById('tankSelect');
+  container.innerHTML = '';
+  // Show armor stat including upgrade for visual feedback
+  const armorBoost = Progression.armor * ARMOR_PER_LEVEL;
+  for (const key of ['HEAVY', 'MEDIUM', 'LIGHT', 'SCOUT']) {
+    const t = TANK_TYPES[key];
+    const card = document.createElement('div');
+    card.className = 'tank-card' + (key === currentlySelectedTankType ? ' selected' : '');
+    const upgradedArmor = Math.min(1, t.stat.armor * (1 + armorBoost));
+    const armorExtra = armorBoost > 0 ?
+      `<span style="color:#6ba35a; font-size:0.6rem;"> +${Math.round(armorBoost * 100)}%</span>` : '';
+    card.innerHTML = `
+      <h3>${t.name}</h3>
+      <div class="desc">${t.desc}</div>
+      <div class="bars">
+        <div class="lbl">ARMR${armorExtra}</div><div class="bar"><div style="width:${upgradedArmor * 100}%"></div></div>
+        <div class="lbl">SPD</div><div class="bar"><div style="width:${t.stat.speed * 100}%"></div></div>
+        <div class="lbl">GUN</div><div class="bar"><div style="width:${t.stat.firepower * 100}%"></div></div>
+        <div class="lbl">AGL</div><div class="bar"><div style="width:${t.stat.agility * 100}%"></div></div>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      currentlySelectedTankType = key;
+      buildTankSelectUI();
+    });
+    container.appendChild(card);
+  }
+}
+
+function buildMapSelectUI() {
+  const container = document.getElementById('mapSelect');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const key of MAP_ORDER) {
+    const m = MAPS[key];
+    const card = document.createElement('div');
+    card.className = 'map-card' + (key === currentlySelectedMap ? ' selected' : '');
+    // Swatch: show ground color + a tree/rock + a pit shape
+    const pitShape = m.pits > 0
+      ? `<div style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:18px; height:18px; border-radius:50%; background: radial-gradient(circle, rgba(0,0,0,0.6), rgba(0,0,0,0));"></div>`
+      : '';
+    const obShape = m.obstacleType === 'tree'
+      ? `<div style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:14px; height:14px; border-radius:50%; background:#3e5a2f;"></div>`
+      : m.obstacleType === 'building'
+      ? `<div style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:14px; height:14px; background:#5a5a62; box-shadow: -20px 0 0 #55504c, -40px 0 0 #6c6c74;"></div>`
+      : `<div style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:14px; height:14px; border-radius:3px; background:#4a4238;"></div>`;
+    card.innerHTML = `
+      <h3>${m.name}</h3>
+      <div class="desc">${m.desc}</div>
+      <div class="map-swatch" style="background:${m.ground};">
+        ${pitShape}
+        ${obShape}
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      currentlySelectedMap = key;
+      buildMapSelectUI();
+    });
+    container.appendChild(card);
+  }
+}
+
+function buildArmoryUI() {
+  const grid = document.getElementById('armoryGrid');
+  const pts = document.getElementById('pointsDisplay');
+  if (!grid || !pts) return;
+  pts.textContent = `${Progression.points} PTS`;
+  grid.innerHTML = '';
+
+  // Rows: Hull perks, Mobility perks, then each ammo type
+  const rows = [
+    { label: 'ARMOR',   sub: '+15% effective', level: Progression.armor,  buy: () => Progression.tryBuyArmor() },
+    { label: 'RELOAD',  sub: '-14% cycle time', level: Progression.reload, buy: () => Progression.tryBuyReload() },
+    { label: 'TURRET',  sub: '+20% traverse',  level: Progression.turret, buy: () => Progression.tryBuyTurret() },
+    { label: 'AP ROUNDS', sub: '+12% dmg/pen', level: Progression.ammo.AP,  buy: () => Progression.tryBuyAmmo('AP') },
+    { label: 'HE ROUNDS', sub: '+12% dmg/pen', level: Progression.ammo.HE,  buy: () => Progression.tryBuyAmmo('HE') },
+    { label: 'TRC ROUNDS',sub: '+12% dmg/pen', level: Progression.ammo.TRC, buy: () => Progression.tryBuyAmmo('TRC') },
+    { label: 'SBT ROUNDS',sub: '+12% dmg/pen', level: Progression.ammo.SBT, buy: () => Progression.tryBuyAmmo('SBT') },
+  ];
+
+  for (const r of rows) {
+    const row = document.createElement('div');
+    row.className = 'armory-row';
+    const cost = Progression.costFor(r.level);
+    const maxed = cost === null;
+    const canAfford = !maxed && Progression.points >= cost;
+    const pips = [0, 1, 2].map(i => `<div class="pip ${i < r.level ? 'on' : ''}"></div>`).join('');
+    row.innerHTML = `
+      <div class="lbl">${r.label}<small>${r.sub}</small></div>
+      <div class="pips">${pips}</div>
+      <button class="buy-btn ${maxed ? 'maxed' : ''}" ${canAfford || maxed ? '' : 'disabled'}>
+        ${maxed ? 'MAX' : cost + ' PT'}
+      </button>
+    `;
+    const btn = row.querySelector('.buy-btn');
+    btn.addEventListener('click', () => {
+      if (maxed) return;
+      if (r.buy()) {
+        buildArmoryUI();
+        buildTankSelectUI();
+      }
+    });
+    grid.appendChild(row);
+  }
+}
+
+/* ============== INIT ============== */
+
+function init() {
+  setCanvasSize();
+  layoutUi();
+  window.addEventListener('resize', () => { setCanvasSize(); layoutUi(); });
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => { setCanvasSize(); layoutUi(); }, 100);
+  });
+
+  // Load persisted progression + audio settings
+  Progression.load();
+  Sound.loadVolumes();
+  const mv = document.getElementById('musicVol'), sv = document.getElementById('sfxVol');
+  const mvv = document.getElementById('musicVolVal'), svv = document.getElementById('sfxVolVal');
+  mv.value = Math.round(Sound.musicVol * 100); mvv.textContent = mv.value;
+  sv.value = Math.round(Sound.sfxVol * 100);   svv.textContent = sv.value;
+  mv.addEventListener('input', () => { Sound.setMusic(mv.value / 100); mvv.textContent = mv.value; });
+  sv.addEventListener('input', () => { Sound.setSfx(sv.value / 100); svv.textContent = sv.value; Sound.click(); });
+  const vsb = document.getElementById('voiceSetBtn'), vav = document.getElementById('voiceAvail');
+  const refreshVoiceBtn = () => {
+    vsb.textContent = Voice.wanted ? '🎙 ON' : '🎙 OFF';
+    vsb.classList.toggle('on', Voice.wanted);
+    vav.textContent = Voice.available ? '' : 'N/A';
+  };
+  refreshVoiceBtn();
+  vsb.addEventListener('click', () => {
+    if (!Voice.available) { vav.textContent = 'N/A'; return; }
+    Voice.wanted = !Voice.wanted;
+    if (!Voice.wanted) Voice.stop();
+    else if (S.mode === 'play') Voice.start();
+    refreshVoiceBtn();
+  });
+  // Browsers only let audio start after a gesture: menu music at low intensity on first tap
+  const warm = () => {
+    Sound.init(); Sound.resume();
+    if (!Sound.music.on) Sound.music.start(S.mode === 'play' ? 1 : 0.2);
+  };
+  document.addEventListener('pointerdown', warm, { passive: true });
+  document.addEventListener('keydown', warm);
+
+  buildTankSelectUI();
+  buildMapSelectUI();
+  buildArmoryUI();
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById('gameover').classList.add('hidden');
+    document.getElementById('menu').classList.remove('hidden');
+    S.mode = 'menu';
+    buildArmoryUI();
+    buildTankSelectUI();
+  });
+  document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+  document.getElementById('spyBtn').addEventListener('click', () => { Link.enterAt = Date.now(); Link.enterSpy(); });
+  document.getElementById('spyExitBtn').addEventListener('click', () => Link.exitSpy());
+  // Warm the room link early so the host is ready when DEPLOY is pressed
+  Link.init();
+  try {
+    if (localStorage.getItem('tc_role') === 'map' || /[?&]mode=map/.test(location.search)) { Link.enterAt = Date.now(); Link.enterSpy(); }
+  } catch (e) {}
+  document.getElementById('resetProgBtn').addEventListener('click', () => {
+    if (confirm('Reset all progression? Points and upgrades will be lost.')) {
+      Progression.reset();
+      buildArmoryUI();
+      buildTankSelectUI();
+    }
+  });
+
+  // iOS Add to Home Screen hint (only in Safari)
+  const isStandalone = window.navigator.standalone === true;
+  const isIOS = /iPad|iPhone|iPod/.test(window.navigator.userAgent);
+  if (isIOS && !isStandalone) {
+    const hint = document.getElementById('install-hint');
+    hint.style.display = 'block';
+    hint.addEventListener('click', () => hint.style.display = 'none');
+    setTimeout(() => { hint.style.display = 'none'; }, 10000);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+
+<script>
+// Offline: service worker caches the whole game on first load
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw && nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            try { showMessage('UPDATE READY — RELAUNCH TO APPLY', 3); } catch (e) {}
+          }
+        });
+      });
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
