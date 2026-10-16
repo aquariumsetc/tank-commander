@@ -254,6 +254,12 @@ html, body {
   </div>
 
   <div class="panel">
+    <div class="panel-label">DIFFICULTY</div>
+    <div class="map-grid" id="diffSelect"></div>
+    <div class="armory-note">Only the enemy AI changes. ROOKIE is a good place to learn the controls — and the <strong>LOCK</strong> button next to FIRE will track a target for you.</div>
+  </div>
+
+  <div class="panel">
     <div class="panel-label">AUDIO &amp; VOICE</div>
     <div class="slider-row"><span>MUSIC</span><input type="range" id="musicVol" min="0" max="100" step="5"><span class="slider-val" id="musicVolVal">50</span></div>
     <div class="slider-row"><span>EFFECTS</span><input type="range" id="sfxVol" min="0" max="100" step="5"><span class="slider-val" id="sfxVolVal">80</span></div>
@@ -267,10 +273,11 @@ html, body {
 
   <div class="controls-info">
     <strong>View:</strong> You start in the <strong>gunner's sight</strong> — a first-person view down the barrel; the gold HULL marker shows which way the tracks point. Tap <strong>VIEW</strong> (or say "top down") for the overhead driver cam. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
-    <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Stick left/right also slews the turret. When you're stopped, the hull stays put so you can aim freely.<br>
+    <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Stick left/right also slews the turret. When you're stopped, the hull stays put so you can aim freely. Tap <strong>LOCK</strong> to have the turret track the enemy you're looking at (leads moving targets; tap again to release). Hold <strong>◀ / ▶</strong> next to FIRE to <em>strafe</em>: the hull crabs sideways while the gun stays locked on target.<br>
     <strong>Aim:</strong> In the gunner view, drag left/right on the right half to slew the turret. In top-down, tap where you want to point. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
+    <strong>Machine gun:</strong> Select <strong>MG</strong> and hold FIRE for continuous fire. It shreds scouts and light tanks from the side or rear but only sparks off heavy armour, and it overheats after about five seconds — watch the heat bar.<br>
     <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire.<br>
-    <strong>Keys:</strong> W/S gears, A/D slew turret (hull follows), mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-4 ammo, M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
+    <strong>Keys:</strong> W/S gears, A/D slew turret (hull follows), Z/X strafe, L lock target, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-5 ammo (5 = machine gun), M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
   </div>
 </div>
 
@@ -391,10 +398,33 @@ const AMMO = {
     size: 2, trailLen: 18, luminous: false,
   },
 };
-const AMMO_ORDER = ['AP', 'HE', 'TRC', 'SBT'];
-const AMMO_LOADOUT = { AP: 15, HE: 8, TRC: 10, SBT: 4 };
+const AMMO_ORDER = ['AP', 'HE', 'TRC', 'SBT', 'MG'];
+const AMMO_LOADOUT = { AP: 15, HE: 8, TRC: 10, SBT: 4, MG: 400 };
+// Coaxial heavy machine gun: hold FIRE to keep shooting. Low penetration — chews up scouts and
+// light tanks from the side/rear, sparks off heavy armour. Overheats after ~5 s of continuous fire.
+AMMO.MG = {
+  key: 'MG', name: 'MG', full: 'Heavy machine gun (coaxial, automatic)',
+  color: '#ffe6a0', tracer: '#ffcc66',
+  v: 720, dmg: 7, pen: 45,
+  range: 820, drop: 0,
+  size: 1.6, trailLen: 5, luminous: false,
+  auto: true, rpm: 540, heatPerShot: 0.031, coolRate: 0.3, spread: 0.014,
+};
 
 const RICOCHET_ANGLE = 70 * Math.PI / 180;
+
+/* ---- DIFFICULTY (persisted) — scales the AI, never the player ---- */
+const DIFFICULTIES = {
+  ROOKIE:  { name: 'ROOKIE',  desc: 'AI reloads slowly, hits softly, spots late', aiReload: 1.7, aiDamage: 0.5, aiSight: 0.75 },
+  REGULAR: { name: 'REGULAR', desc: 'Balanced',                                     aiReload: 1.0, aiDamage: 1.0, aiSight: 1.0 },
+  VETERAN: { name: 'VETERAN', desc: 'AI reloads fast, hits hard, spots far',        aiReload: 0.8, aiDamage: 1.25, aiSight: 1.2 },
+};
+const Difficulty = {
+  key: 'REGULAR',
+  get spec() { return DIFFICULTIES[this.key] || DIFFICULTIES.REGULAR; },
+  load() { try { const k = localStorage.getItem('tc_difficulty'); if (DIFFICULTIES[k]) this.key = k; } catch (e) {} },
+  set(k) { if (DIFFICULTIES[k]) { this.key = k; try { localStorage.setItem('tc_difficulty', k); } catch (e) {} } },
+};
 
 /* ---- SHELL ARC (indirect fire) ----
    elevation 0 = flat direct fire (hits the first thing in its path).
@@ -711,6 +741,22 @@ const Sound = {
     const cg = this.ctx.createGain();
     cg.gain.setValueAtTime(0.08, t + 0.03); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
     c.connect(cg).connect(this.sfx); c.start(t + 0.03); c.stop(t + 0.1);
+  },
+  mg(pos) {
+    if (!this.enabled || !this.ctx || !this._rateLimit('mg', 0.05)) return;
+    const g = this._posGain(pos);
+    if (g < 0.02) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'square';
+    o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.05);
+    const og = this.ctx.createGain();
+    og.gain.setValueAtTime(0.22 * g, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    o.connect(og).connect(this.sfx); o.start(t); o.stop(t + 0.07);
+    const n = this._noise(0.05);
+    const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 1.2;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.3 * g, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    n.connect(bp).connect(ng).connect(this.sfx); n.start(t); n.stop(t + 0.05);
   },
   dryFire() {
     if (!this.enabled || !this.ctx || !this._rateLimit('dry', 0.25)) return;
@@ -1215,11 +1261,15 @@ const Voice = {
     { re: /\b(he|high explosive|explosive)\b/,   act: () => S.player && (S.player.selectedAmmo = 'HE'),  label: 'HE' },
     { re: /\b(tracer|tracers)\b/,                act: () => S.player && (S.player.selectedAmmo = 'TRC'), label: 'TRACER' },
     { re: /\b(sabot|sabo|sab[oa]t)\b/,           act: () => S.player && (S.player.selectedAmmo = 'SBT'), label: 'SABOT' },
+    { re: /\b(machine gun|mg|coax)\b/,            act: () => S.player && (S.player.selectedAmmo = 'MG'),  label: 'MG' },
+    { re: /\b(main gun|cannon)\b/,                act: () => S.player && (S.player.selectedAmmo = 'AP'),  label: 'MAIN GUN' },
     { re: /\b(full speed|flank speed|full ahead)\b/, act: () => S.player && (S.player.voiceGear = 3), label: 'FULL SPEED' },
     { re: /\b(forward|advance|ahead)\b/,         act: () => S.player && (S.player.voiceGear = 2), label: 'FORWARD' },
     { re: /\b(slow|creep)\b/,                    act: () => S.player && (S.player.voiceGear = 1), label: 'SLOW' },
     { re: /\b(reverse|back up|retreat)\b/,       act: () => S.player && (S.player.voiceGear = -1), label: 'REVERSE' },
     { re: /\b(stop|halt|brake)\b/,               act: () => S.player && (S.player.voiceGear = 0), label: 'STOP' },
+    { re: /\b(lock on|lock|target)\b/,            act: () => { if (S.player && !S.player.lockTarget) toggleLock(); }, label: 'LOCK' },
+    { re: /\b(unlock|release|break lock)\b/,     act: () => { if (S.player && S.player.lockTarget) toggleLock(); }, label: 'UNLOCK' },
     { re: /\b(lob|indirect|elevate)\b/,          act: () => S.player && (S.player.elevation = Math.max(0.4, S.player.elevation)), label: 'LOB' },
     { re: /\b(direct|level|flat)\b/,             act: () => S.player && (S.player.elevation = 0), label: 'DIRECT' },
   ],
@@ -1395,9 +1445,12 @@ class Tank {
     this.firePressed = false;    // edge trigger for keyboard
     this.recoil = 0;
     this.elevation = 0;          // 0 = direct fire, 0..1 = lob distance (player only)
+    this.mgTimer = 0;            // time until the MG can cycle again
+    this.mgHeat = 0;             // 0..1; at 1 the gun jams until it cools below 0.35
+    this.mgJammed = false;
     // Upgrades apply to player only (AI stays balanced)
     this.armorMult   = isPlayer ? (1 + Progression.armor  * ARMOR_PER_LEVEL)  : 1;
-    this.reloadMult  = isPlayer ? (1 - Progression.reload * RELOAD_PER_LEVEL) : 1;
+    this.reloadMult  = isPlayer ? (1 - Progression.reload * RELOAD_PER_LEVEL) : (team === 'red' ? Difficulty.spec.aiReload : 1);
     this.turretMult  = isPlayer ? (1 + Progression.turret * TURRET_PER_LEVEL) : 1;
     // Velocity direction (separate from hullAngle to allow sliding on ice)
     this.velAngle = this.hullAngle;
@@ -1530,8 +1583,15 @@ class Tank {
       if (this.reloadTimer <= 0 && this.isPlayer) Sound.ready();
     }
 
+    // Machine-gun cycle + heat
+    if (this.mgTimer > 0) this.mgTimer -= dt;
+    if (this.mgHeat > 0) this.mgHeat = Math.max(0, this.mgHeat - AMMO.MG.coolRate * dt * (this.firing && this.selectedAmmo === 'MG' ? 0.35 : 1));
+    if (this.mgJammed && this.mgHeat < 0.35) { this.mgJammed = false; if (this.isPlayer) showMessage('MG COOLED', 1); }
+
     // Firing (continuous when held or AI commanded)
-    if (this.firing && this.reloadTimer <= 0 && this.ammo[this.selectedAmmo] > 0) {
+    if (this.selectedAmmo === 'MG') {
+      if (this.firing && this.mgTimer <= 0 && !this.mgJammed && this.ammo.MG > 0) this.fire(t);
+    } else if (this.firing && this.reloadTimer <= 0 && this.ammo[this.selectedAmmo] > 0) {
       this.fire(t);
       if (this.isPlayer) {
         // for mouse/touch continuous fire; auto re-fire when ready
@@ -1603,11 +1663,28 @@ class Tank {
     const kind = this.selectedAmmo;
     if (this.ammo[kind] <= 0) {
       for (const k of AMMO_ORDER) {
+        if (k === 'MG' && !this.isPlayer) continue;
         if (this.ammo[k] > 0) { this.selectedAmmo = k; return; }
       }
       return;
     }
     const ammoSpec = AMMO[kind];
+    if (kind === 'MG') {
+      this.ammo.MG--;
+      this.mgTimer = 60 / ammoSpec.rpm;
+      this.mgHeat = Math.min(1, this.mgHeat + ammoSpec.heatPerShot);
+      if (this.mgHeat >= 1) { this.mgJammed = true; if (this.isPlayer) showMessage('MG OVERHEATED', 1.2); }
+      const a = this.turretAngle + rand(-ammoSpec.spread, ammoSpec.spread) * (1 + this.mgHeat);
+      const mx = this.x + Math.cos(this.turretAngle) * (this.spec.barrelLen * 0.8) + Math.cos(this.turretAngle + Math.PI / 2) * 6;
+      const my = this.y + Math.sin(this.turretAngle) * (this.spec.barrelLen * 0.8) + Math.sin(this.turretAngle + Math.PI / 2) * 6;
+      const b = new Bullet(mx, my, Math.cos(a) * ammoSpec.v, Math.sin(a) * ammoSpec.v, 'MG', this);
+      b.tracer = (this.ammo.MG % 4) === 0;
+      S.bullets.push(b);
+      this.recoil = Math.max(this.recoil, 0.06);
+      S.effects.push(new MuzzleFlash(mx, my, this.turretAngle, 0.45));
+      Sound.mg({ x: mx, y: my });
+      return;
+    }
     this.ammo[kind]--;
     const ammoFactor = kind === 'HE' ? 1.05 : kind === 'SBT' ? 1.1 : 1;
     this.reloadTimer = this.spec.reloadBase * ammoFactor * this.reloadMult;
@@ -1664,7 +1741,7 @@ class Tank {
 
     // bullet.pen and bullet.dmg already include ammo upgrade multipliers
     if (bullet.pen >= effArmor || bullet.type === 'HE') {
-      this.hp -= bullet.dmg;
+      this.hp -= bullet.dmg * (this.isPlayer && bullet.owner && !bullet.owner.isPlayer ? Difficulty.spec.aiDamage : 1);
       S.effects.push(new Spark(hx, hy, false));
       Sound.impact({ x: hx, y: hy }, true);
       // Mark enemy as spotted
@@ -1683,6 +1760,7 @@ class Tank {
 
   kill(killer) {
     this.alive = false;
+    if (this.isPlayer) this.lockTarget = null;
     this.respawnTimer = this.isPlayer ? 4.0 : rand(5, 10);
     S.effects.push(new Explosion(this.x, this.y, 90, '#ff8833'));
     Sound.explosion({ x: this.x, y: this.y }, true);
@@ -1807,7 +1885,7 @@ class Bullet {
         const dd = dist(other, this);
         if (dd < R) {
           const falloff = 1 - dd / R;
-          other.hp -= this.splashDmg * falloff * 0.7;
+          other.hp -= this.splashDmg * falloff * 0.7 * (other.isPlayer && !this.owner.isPlayer ? Difficulty.spec.aiDamage : 1);
           other.lastHit = 0.5;
           if (other.team !== this.team) S.playerSpotted.set(other.id, S.time + 3);
           if (other.hp <= 0) other.kill(this.owner);
@@ -1863,7 +1941,7 @@ class Bullet {
                 if (dd < this.spec.splashR) {
                   const falloff = 1 - dd / this.spec.splashR;
                   const splashHp = this.splashDmg * falloff * 0.55;
-                  other.hp -= splashHp;
+                  other.hp -= splashHp * (other.isPlayer && !this.owner.isPlayer ? Difficulty.spec.aiDamage : 1);
                   other.lastHit = 0.5;
                   if (other.hp <= 0) other.kill(this.owner);
                 }
@@ -2084,6 +2162,8 @@ const Input = {
   fireTouch: { active: false, id: null },
   fireHeld: false,
   elevTouch: { active: false, id: null },
+  strafe: 0,          // -1 left, 1 right while a strafe button is held
+  lockRequest: false,
 
   buttons: [], // Rebuilt per frame: {x,y,r,action,label,id?}
   touches: new Map(),
@@ -2129,15 +2209,19 @@ function layoutUi() {
   Input.buttons.push({ x: w - 36, y: 200, r: BTN_RADIUS - 2, action: 'gyro', label: 'TILT' });
   Input.buttons.push({ x: w - 36, y: 248, r: BTN_RADIUS - 4, action: 'recal', label: '⟲' });
   Input.buttons.push({ x: w - 36, y: 296, r: BTN_RADIUS - 4, action: 'mute', label: Sound.enabled ? 'SND' : 'MUTE' });
+  // Target lock (toggle) + strafe buttons (hold) to the left of FIRE
+  Input.buttons.push({ x: w - 244, y: h - 100, r: 22, action: 'lock', label: 'LOCK' });
+  Input.buttons.push({ x: w - 190, y: h - 100, r: 22, action: 'strafe', dir: -1, label: '◀' });
+  Input.buttons.push({ x: w - 140, y: h - 100, r: 22, action: 'strafe', dir: 1, label: '▶' });
   // Request stack (supply, medic, smoke)
   Input.buttons.push({ x: 36, y: 36,  r: BTN_RADIUS, action: 'supply', label: 'SUP' });
   Input.buttons.push({ x: 36, y: 96,  r: BTN_RADIUS - 2, action: 'medic', label: 'MED' });
   Input.buttons.push({ x: 36, y: 148, r: BTN_RADIUS - 2, action: 'smoke', label: 'SMK' });
   // Ammo switch icons across bottom-left area above joystick
-  const ammoBtnStart = Input.joyAnchorL.x - 48;
+  const ammoBtnStart = Input.joyAnchorL.x - 52;
   for (let i = 0; i < AMMO_ORDER.length; i++) {
     Input.buttons.push({
-      x: ammoBtnStart + i * 44,
+      x: ammoBtnStart + i * 42,
       y: h - 210,
       r: 18,
       action: 'ammo',
@@ -2145,6 +2229,48 @@ function layoutUi() {
       label: AMMO[AMMO_ORDER[i]].name,
     });
   }
+}
+
+/* ---- Target lock: the turret tracks a chosen enemy (with lead) until it dies, hides, or you release ---- */
+function acquireLock() {
+  const p = S.player; if (!p || !p.alive) return null;
+  const mapSight = S.mapSpec ? S.mapSpec.sightMultiplier : 1;
+  const maxD = p.spec.sight * mapSight * 1.15;
+  let best = null, bestScore = Infinity;
+  for (const t of S.tanks) {
+    if (t.team !== 'red' || !t.alive) continue;
+    if ((S.playerSpotted.get(t.id) || 0) <= S.time) continue;
+    const d = dist(t, p);
+    if (d > maxD) continue;
+    const off = Math.abs(angleDiff(p.turretAngle, Math.atan2(t.y - p.y, t.x - p.x)));
+    const score = off * 400 + d;     // prefer what you're already looking at, then the nearest
+    if (score < bestScore) { bestScore = score; best = t; }
+  }
+  return best;
+}
+function toggleLock() {
+  const p = S.player; if (!p) return;
+  if (p.lockTarget) { p.lockTarget = null; showMessage('LOCK RELEASED', 1); Sound.click(); return; }
+  const t = acquireLock();
+  if (t) { p.lockTarget = t; p.lockLost = 0; showMessage('TARGET LOCKED', 1); Sound.click(); }
+  else showMessage('NO TARGET IN SIGHT', 1.2);
+}
+function updateLock(p, dt) {
+  const t = p.lockTarget;
+  if (!t) return false;
+  const spotted = (S.playerSpotted.get(t.id) || 0) > S.time;
+  const mapSight = S.mapSpec ? S.mapSpec.sightMultiplier : 1;
+  if (!t.alive || dist(t, p) > p.spec.sight * mapSight * 1.3) { p.lockTarget = null; showMessage('LOCK LOST', 1); return false; }
+  p.lockLost = spotted ? 0 : (p.lockLost || 0) + dt;
+  if (p.lockLost > 2) { p.lockTarget = null; showMessage('LOCK LOST', 1); return false; }
+  // Lead the target like the AI does
+  const spec = AMMO[p.selectedAmmo];
+  const d = dist(t, p);
+  const tth = d / spec.v;
+  const ax = t.x + Math.cos(t.velAngle) * t.speed * tth;
+  const ay = t.y + Math.sin(t.velAngle) * t.speed * tth;
+  p.turretTarget = Math.atan2(ay - p.y, ax - p.x);
+  return true;
 }
 
 function toggleMapView() {
@@ -2176,6 +2302,8 @@ function doButton(b) {
   else if (b.action === 'medic')  { if (S.player) S.player.requestMedic(); }
   else if (b.action === 'smoke')  { if (S.player) S.player.requestSmoke(); }
   else if (b.action === 'ammo')   { if (S.player) { S.player.selectedAmmo = b.ammo; Sound.click(); } }
+  else if (b.action === 'strafe') { Input.strafe = b.dir; }
+  else if (b.action === 'lock')   { toggleLock(); }
   else if (b.action === 'gyro') {
     if (Gyro.enabled) {
       Gyro.disable();
@@ -2299,6 +2427,8 @@ function endTouch(id) {
   } else if (info.type === 'elev') {
     Input.elevTouch.active = false;
     Input.elevTouch.id = null;
+  } else if (info.type === 'btn' && info.btn && info.btn.action === 'strafe') {
+    Input.strafe = 0;
   }
   Input.touches.delete(id);
 }
@@ -2331,12 +2461,13 @@ window.addEventListener('mouseup', () => {
 window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   Input.keys[k] = true;
-  if ([' ', 'tab', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', 'q', 'e', 'r', 'm', '0', '1', '2', '3', '4'].includes(k)) {
+  if ([' ', 'tab', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', 'q', 'e', 'r', 'm', '0', '1', '2', '3', '4', '5'].includes(k)) {
     e.preventDefault();
   }
   if (S.mode !== 'play') return;
   if (k === 'm' || k === 'tab') toggleMapView();
   if (k === 'c') setWorldView(S.lastWorldView === 'cab' ? 'tank' : 'cab');
+  if (k === 'l') toggleLock();
   if (k === 'q') S.zoom = clamp(S.zoom / 1.2, S.minZoom, S.maxZoom);
   if (k === 'e') S.zoom = clamp(S.zoom * 1.2, S.minZoom, S.maxZoom);
   if (S.player) {
@@ -2344,6 +2475,7 @@ window.addEventListener('keydown', e => {
     if (k === '2') S.player.selectedAmmo = 'HE';
     if (k === '3') S.player.selectedAmmo = 'TRC';
     if (k === '4') S.player.selectedAmmo = 'SBT';
+    if (k === '5') S.player.selectedAmmo = 'MG';
     if (k === 'r') S.player.requestAirdrop();
     if (k === 'g') S.player.requestMedic();
     if (k === 'f') S.player.requestSmoke();
@@ -2443,6 +2575,26 @@ function applyPlayerInput(dt) {
     }
   }
 
+  // --- Strafe (hold ◀/▶ or Z/X): the hull crabs sideways and keeps rolling,
+  //     while the turret stays locked on where you're looking ---
+  let strafe = Input.strafe;
+  if (Input.keys['z']) strafe = -1;
+  if (Input.keys['x']) strafe = 1;
+  if (strafe && p.alive) {
+    if (p.strafeLock === undefined || p.strafeLock === null) p.strafeLock = p.turretTarget;   // world-frame lock
+    p.turretTarget = p.strafeLock;
+    updateLock(p, dt);                               // a locked target still wins over the strafe lock
+    if (p.targetGear === 0) p.targetGear = 1;      // sidestep needs some forward motion
+    p.steer = strafe * (p.speed < 0 ? -1 : 1);
+    p.firing = Input.fireHeld;
+    if (p.voiceFire) { p.voiceFire = false; if (p.reloadTimer <= 0 && p.ammo[p.selectedAmmo] > 0) p.fire(S.time); }
+    return;
+  }
+  p.strafeLock = null;
+
+  // --- Target lock overrides manual aim ---
+  updateLock(p, dt);
+
   // --- Turret steering: the hull swings to follow the gun whenever the tank is moving.
   //     Stationary = free aim (no pivoting while you line up a shot). ---
   const moving = p.targetGear !== 0 || Math.abs(p.speed) > 4;
@@ -2497,7 +2649,7 @@ function aiThink(t, dt) {
     for (const p of S.pits) {
       if (dist2(other.x, other.y, p.x, p.y) < p.r * p.r) { inPit = true; break; }
     }
-    const effSight = t.spec.sight * mapSight * (inPit ? 0.4 : 1);
+    const effSight = t.spec.sight * mapSight * (inPit ? 0.4 : 1) * (t.team === 'red' ? Difficulty.spec.aiSight : 1);
     if (d < effSight && d < bestD) {
       // LOS check — obstacles always block
       let blocked = false;
@@ -3608,6 +3760,7 @@ function drawTank(t) {
 
 function drawBullet(b) {
   const spec = b.spec;
+  if (b.type === 'MG' && !b.tracer) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(b.x, b.y, 1.4, 0, TAU); ctx.fill(); return; }
   // Trail
   if (b.trail.length > 1) {
     ctx.strokeStyle = spec.tracer;
@@ -4080,6 +4233,7 @@ function renderCabView() {
       const b = o, spec = b.spec;
       const q = cabProject(c, b.x, b.y, 8 + b.z);
       if (!q) continue;
+      if (b.type === 'MG' && !b.tracer) { ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, 1.2 * q.s * 6), 0, TAU); ctx.fill(); ctx.globalAlpha = 1; continue; }
       if (b.trail.length > 1) {
         const t0 = b.trail[0];
         const q0 = cabProject(c, t0.x, t0.y, 8 + b.z);
@@ -4140,7 +4294,7 @@ function renderCabView() {
   }
 
   // --- Gunsight ---
-  const cy = c.hz + (h - c.hz) * 0.18;  // where a level shot converges on flat ground at mid range
+  const cy = c.hz + 2;  // gun is level: the sight sits on the horizon
   const sightCol = p.elevation > 0.02 ? 'rgba(201, 168, 90, 0.95)' : 'rgba(212, 106, 90, 0.95)';
   ctx.strokeStyle = sightCol; ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -4157,7 +4311,7 @@ function renderCabView() {
   let lastLadderY = -99;
   for (const rng of [400, 800, 1200]) {
     const q = cabProject(c, p.x + c.cos * rng, p.y + c.sin * rng, 0);
-    if (!q || q.y > h - 80 || Math.abs(q.y - cy) < 14 || Math.abs(q.y - lastLadderY) < 11) continue;
+    if (!q || q.y > h - 80 || q.y - cy < 12 || Math.abs(q.y - lastLadderY) < 11) continue;
     lastLadderY = q.y;
     ctx.strokeStyle = 'rgba(214, 210, 195, 0.3)'; ctx.beginPath(); ctx.moveTo(w / 2 + 30, q.y); ctx.lineTo(w / 2 + 40, q.y); ctx.stroke();
     ctx.fillText(Math.round(rng * CAB.M_PER_UNIT) + 'm', w / 2 + 44, q.y);
@@ -4209,6 +4363,32 @@ function renderCabView() {
     ctx.fillStyle = COLORS.accent; ctx.textBaseline = 'middle'; ctx.textAlign = hullOff > 0 ? 'right' : 'left';
     ctx.fillText(hullOff > 0 ? 'HULL ▶' : '◀ HULL', w / 2 + (hullOff > 0 ? tapeW / 2 - 4 : -tapeW / 2 + 4), ty);
   }
+  // Target-lock bracket
+  if (p.lockTarget && p.lockTarget.alive) {
+    const t = p.lockTarget;
+    const q = cabProject(c, t.x, t.y, 10);
+    if (q) {
+      const sz = clamp(t.spec.size.h * q.s * 0.9, 18, 160);
+      const pulse = 0.75 + 0.25 * Math.sin(S.time * 8);
+      ctx.strokeStyle = `rgba(212, 106, 90, ${pulse})`; ctx.lineWidth = 2;
+      const L = sz * 0.35;
+      ctx.beginPath();
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const cx0 = q.x + sx * sz, cy0 = q.y + sy * sz * 0.6;
+        ctx.moveTo(cx0, cy0 - sy * L); ctx.lineTo(cx0, cy0); ctx.lineTo(cx0 - sx * L, cy0);
+      }
+      ctx.stroke();
+      ctx.fillStyle = COLORS.warn; ctx.font = 'bold 10px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('LOCK ' + Math.round(dist(t, p) * CAB.M_PER_UNIT) + 'm', q.x, q.y - sz * 0.6 - 4);
+    } else {
+      // Behind us: arrow at the edge
+      const off = angleDiff(c.yaw, Math.atan2(t.y - p.y, t.x - p.x));
+      const dir = Math.sign(off);
+      ctx.fillStyle = COLORS.warn;
+      ctx.beginPath(); ctx.moveTo(w / 2 + dir * (w * 0.38), cy); ctx.lineTo(w / 2 + dir * (w * 0.38 - 16), cy - 10); ctx.lineTo(w / 2 + dir * (w * 0.38 - 16), cy + 10); ctx.closePath(); ctx.fill();
+    }
+  }
+
   // Damage vignette
   if (p.lastHit > 0) {
     const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.7);
@@ -4752,14 +4932,20 @@ function renderHUD() {
   // Reload
   ctx.fillStyle = COLORS.textDim;
   ctx.font = '9px ui-monospace, monospace';
-  ctx.fillText('RELOAD', hudX + 130, hudY + 40);
+  const mgSel = p.selectedAmmo === 'MG';
+  ctx.fillText(mgSel ? 'MG HEAT' : 'RELOAD', hudX + 130, hudY + 40);
   const actualReload = p.spec.reloadBase * p.reloadMult;
   const reloadFrac = p.reloadTimer > 0 ? (p.reloadTimer / actualReload) : 0;
   const rlX = hudX + 130, rlY = hudY + 54, rlW = 70;
   ctx.fillStyle = '#1f221c';
   ctx.fillRect(rlX, rlY, rlW, 6);
-  ctx.fillStyle = reloadFrac > 0 ? COLORS.warn : COLORS.ok;
-  ctx.fillRect(rlX, rlY, rlW * (1 - reloadFrac), 6);
+  if (mgSel) {
+    ctx.fillStyle = p.mgJammed ? COLORS.warn : p.mgHeat > 0.7 ? COLORS.accent : COLORS.ok;
+    ctx.fillRect(rlX, rlY, rlW * p.mgHeat, 6);
+  } else {
+    ctx.fillStyle = reloadFrac > 0 ? COLORS.warn : COLORS.ok;
+    ctx.fillRect(rlX, rlY, rlW * (1 - reloadFrac), 6);
+  }
 
   // Ammo totals under HUD
   const ammoY = hudY + 70;
@@ -4768,7 +4954,7 @@ function renderHUD() {
   ctx.textAlign = 'left';
   ctx.fillText('LOADOUT', hudX + 10, ammoY);
   const abx = hudX + 10, aby = ammoY + 12;
-  const bw = 46;
+  const bw = 38;
   for (let i = 0; i < AMMO_ORDER.length; i++) {
     const k = AMMO_ORDER[i];
     const sel = p.selectedAmmo === k;
@@ -4777,7 +4963,7 @@ function renderHUD() {
     ctx.fillRect(x, aby, bw, 14);
     ctx.fillStyle = sel ? '#0d0e0c' : COLORS.text;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 9px ui-monospace, monospace';
+    ctx.font = 'bold 8px ui-monospace, monospace';
     ctx.fillText(AMMO[k].name + ' ' + p.ammo[k], x + bw / 2, aby + 7);
   }
 
@@ -4790,7 +4976,9 @@ function renderHUD() {
     const gyroActive = b.action === 'gyro' && Gyro.enabled;
     const muted = b.action === 'mute' && !Sound.enabled;
     const voiceOn = b.action === 'voice' && Voice.wanted;
-    const highlighted = activeAmmo || gyroActive || muted || voiceOn;
+    const strafing = b.action === 'strafe' && Input.strafe === b.dir;
+    const locked = b.action === 'lock' && !!p.lockTarget;
+    const highlighted = activeAmmo || gyroActive || muted || voiceOn || strafing || locked;
     ctx.fillStyle = highlighted ? 'rgba(201, 168, 90, 0.2)' : COLORS.hudBg;
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, TAU);
@@ -4799,9 +4987,13 @@ function renderHUD() {
     ctx.lineWidth = highlighted ? 2 : 1.5;
     ctx.stroke();
     ctx.fillStyle = highlighted ? COLORS.accent : COLORS.text;
-    ctx.font = 'bold ' + (b.r > 20 ? 11 : 9) + 'px "Arial Narrow", sans-serif';
+    ctx.font = 'bold ' + (b.action === 'strafe' ? 16 : b.r > 20 ? 11 : 9) + 'px "Arial Narrow", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(b.label, b.x, b.y);
+    if (b.action === 'strafe') {
+      ctx.fillStyle = COLORS.textDim; ctx.font = '7px ui-monospace, monospace'; ctx.textBaseline = 'top';
+      ctx.fillText('STRAFE', b.x, b.y + b.r + 3);
+    }
   }
   // Request cooldown indicators
   function drawCooldownRing(action, cooldown, max) {
@@ -4898,7 +5090,7 @@ function renderHUD() {
 
   // --- Fire button ---
   if (Input.fireAnchor) {
-    const canFire = p.reloadTimer <= 0 && p.ammo[p.selectedAmmo] > 0 && p.alive;
+    const canFire = p.alive && p.ammo[p.selectedAmmo] > 0 && (p.selectedAmmo === 'MG' ? !p.mgJammed : p.reloadTimer <= 0);
     ctx.fillStyle = canFire ? (Input.fireHeld ? '#d46a5a' : COLORS.hudBg) : COLORS.hudBg;
     ctx.beginPath();
     ctx.arc(Input.fireAnchor.x, Input.fireAnchor.y, Input.fireAnchor.r, 0, TAU);
@@ -5058,6 +5250,18 @@ function renderHUD() {
     }
   }
 
+  // --- Target-lock bracket (top-down view) ---
+  if (p.lockTarget && p.lockTarget.alive && S.view === 'tank') {
+    const t = p.lockTarget;
+    const q = worldToScreenDriver(t.x, t.y);
+    const r = 34 * S.zoom + 10;
+    ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(S.time * 1.5);
+    ctx.strokeStyle = `rgba(212, 106, 90, ${0.75 + 0.25 * Math.sin(S.time * 8)})`; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.moveTo(r, -r * 0.4); ctx.lineTo(r, r * 0.4); }
+    ctx.stroke(); ctx.restore();
+  }
+
   // --- Tilt indicator (when gyro on, shows deltas as a small cross) ---
   if (Gyro.enabled) {
     const gx = window.innerWidth - 130, gy = window.innerHeight - 172;
@@ -5155,6 +5359,20 @@ function buildTankSelectUI() {
   }
 }
 
+function buildDifficultyUI() {
+  const c = document.getElementById('diffSelect');
+  if (!c) return;
+  c.innerHTML = '';
+  for (const k of Object.keys(DIFFICULTIES)) {
+    const d = DIFFICULTIES[k];
+    const card = document.createElement('div');
+    card.className = 'map-card' + (k === Difficulty.key ? ' selected' : '');
+    card.innerHTML = `<h3>${d.name}</h3><div class="desc">${d.desc}</div>`;
+    card.addEventListener('click', () => { Difficulty.set(k); buildDifficultyUI(); Sound.click(); });
+    c.appendChild(card);
+  }
+}
+
 function buildMapSelectUI() {
   const container = document.getElementById('mapSelect');
   if (!container) return;
@@ -5244,6 +5462,8 @@ function init() {
 
   // Load persisted progression + audio settings
   Progression.load();
+  Difficulty.load();
+  buildDifficultyUI();
   Sound.loadVolumes();
   const mv = document.getElementById('musicVol'), sv = document.getElementById('sfxVol');
   const mvv = document.getElementById('musicVolVal'), svv = document.getElementById('sfxVolVal');
