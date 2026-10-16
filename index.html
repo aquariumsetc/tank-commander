@@ -266,11 +266,11 @@ html, body {
   <div class="armory-note" id="spyNote">Open this same page on a second device (same account), tap COMPANION MAP there, and it mirrors the battlefield live while you play here.</div>
 
   <div class="controls-info">
-    <strong>View:</strong> Driver's perspective — forward is always up on screen. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
-    <strong>Drive:</strong> Left joystick — <em>hold where you want to go</em>. Push up for forward gears (further = faster), down for reverse, left/right to steer. Release to brake. At gear 0 with steering, the tank pivots in place.<br>
-    <strong>Aim:</strong> Tap anywhere on the right to aim the turret. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
+    <strong>View:</strong> You start in the <strong>gunner's sight</strong> — a first-person view down the barrel; the gold HULL marker shows which way the tracks point. Tap <strong>VIEW</strong> (or say "top down") for the overhead driver cam. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
+    <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Stick left/right also slews the turret. When you're stopped, the hull stays put so you can aim freely.<br>
+    <strong>Aim:</strong> In the gunner view, drag left/right on the right half to slew the turret. In top-down, tap where you want to point. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
     <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire.<br>
-    <strong>Keys:</strong> W/S gears, A/D steer, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-4 ammo, M map, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
+    <strong>Keys:</strong> W/S gears, A/D slew turret (hull follows), mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-4 ammo, M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
   </div>
 </div>
 
@@ -1208,7 +1208,9 @@ const Voice = {
     { re: /\b(smoke|smokescreen)\b/,             act: () => S.player && S.player.requestSmoke(),   label: 'SMOKE' },
     { re: /\b(medic|repair)\b/,                  act: () => S.player && S.player.requestMedic(),   label: 'MEDIC' },
     { re: /\b(supply|supplies|resupply|ammo drop)\b/, act: () => S.player && S.player.requestAirdrop(), label: 'SUPPLY' },
-    { re: /\b(map)\b/,                           act: () => { S.view = S.view === 'tank' ? 'map' : 'tank'; }, label: 'MAP' },
+    { re: /\b(map)\b/,                           act: () => toggleMapView(), label: 'MAP' },
+    { re: /\b(top down|overhead|top view)\b/,    act: () => setWorldView('tank'), label: 'TOP VIEW' },
+    { re: /\b(gunner|gun sight|cab|first person)\b/, act: () => setWorldView('cab'), label: 'GUNNER VIEW' },
     { re: /\b(ap|armou?r piercing)\b/,           act: () => S.player && (S.player.selectedAmmo = 'AP'),  label: 'AP' },
     { re: /\b(he|high explosive|explosive)\b/,   act: () => S.player && (S.player.selectedAmmo = 'HE'),  label: 'HE' },
     { re: /\b(tracer|tracers)\b/,                act: () => S.player && (S.player.selectedAmmo = 'TRC'), label: 'TRACER' },
@@ -2072,13 +2074,13 @@ const ctx = canvas.getContext('2d');
 
 const Input = {
   keys: {},
-  mouseX: 0, mouseY: 0,
+  mouseX: 0, mouseY: 0, mouseMoved: false, _mouseIdle: 0,
   mouseInWorld: { x: 0, y: 0 },
   mouseDown: false,
 
   joyL: { active: false, cx: 0, cy: 0, x: 0, y: 0, id: null, lastGearShift: 0 },
   joyR: { active: false, cx: 0, cy: 0, x: 0, y: 0, id: null },
-  aimTouch: { active: false, x: 0, y: 0, id: null },
+  aimTouch: { active: false, x: 0, y: 0, id: null, lastX: 0, lastY: 0 },
   fireTouch: { active: false, id: null },
   fireHeld: false,
   elevTouch: { active: false, id: null },
@@ -2119,6 +2121,7 @@ function layoutUi() {
   // Map toggle (top-right)
   Input.buttons.push({ x: w - 36, y: 36, r: BTN_RADIUS, action: 'toggleMap', label: 'MAP' });
   if (Voice.available) Input.buttons.push({ x: w - 92, y: 30, r: 18, action: 'voice', label: 'VOC' });
+  Input.buttons.push({ x: w - (Voice.available ? 140 : 92), y: 30, r: 18, action: 'view', label: 'VIEW' });
   // Zoom buttons under it
   Input.buttons.push({ x: w - 36, y: 96, r: BTN_RADIUS - 2, action: 'zoomIn', label: '+' });
   Input.buttons.push({ x: w - 36, y: 148, r: BTN_RADIUS - 2, action: 'zoomOut', label: '−' });
@@ -2144,6 +2147,17 @@ function layoutUi() {
   }
 }
 
+function toggleMapView() {
+  if (S.view === 'map') S.view = S.lastWorldView || 'cab';
+  else { S.lastWorldView = S.view; S.view = 'map'; }
+}
+function setWorldView(v) {
+  S.lastWorldView = v;
+  if (S.view !== 'map') S.view = v;
+  if (v === 'cab' && S.player) CAB.yaw = S.player.turretAngle;
+  showMessage(v === 'cab' ? 'GUNNER VIEW' : 'TOP-DOWN VIEW', 1.2);
+}
+
 function hitButton(x, y) {
   for (const b of Input.buttons) {
     const d = Math.hypot(x - b.x, y - b.y);
@@ -2154,7 +2168,8 @@ function hitButton(x, y) {
 
 function doButton(b) {
   if (!b) return;
-  if (b.action === 'toggleMap') S.view = S.view === 'tank' ? 'map' : 'tank';
+  if (b.action === 'toggleMap') toggleMapView();
+  else if (b.action === 'view') { setWorldView(S.lastWorldView === 'cab' ? 'tank' : 'cab'); Sound.click(); }
   else if (b.action === 'zoomIn') S.zoom = clamp(S.zoom * 1.25, S.minZoom, S.maxZoom);
   else if (b.action === 'zoomOut') S.zoom = clamp(S.zoom / 1.25, S.minZoom, S.maxZoom);
   else if (b.action === 'supply') { if (S.player) S.player.requestAirdrop(); }
@@ -2235,6 +2250,7 @@ canvas.addEventListener('touchstart', e => {
     if (!Input.aimTouch.active) {
       Input.aimTouch.active = true;
       Input.aimTouch.x = x; Input.aimTouch.y = y;
+      Input.aimTouch.lastX = x; Input.aimTouch.lastY = y;
       Input.aimTouch.id = touch.identifier;
       Input.touches.set(touch.identifier, { x, y, type: 'aim' });
     }
@@ -2305,6 +2321,7 @@ canvas.addEventListener('mousedown', e => {
 });
 window.addEventListener('mousemove', e => {
   Input.mouseX = e.clientX; Input.mouseY = e.clientY;
+  Input.mouseMoved = true; Input._mouseIdle = 0;
 });
 window.addEventListener('mouseup', () => {
   Input.mouseDown = false;
@@ -2318,7 +2335,8 @@ window.addEventListener('keydown', e => {
     e.preventDefault();
   }
   if (S.mode !== 'play') return;
-  if (k === 'm' || k === 'tab') S.view = S.view === 'tank' ? 'map' : 'tank';
+  if (k === 'm' || k === 'tab') toggleMapView();
+  if (k === 'c') setWorldView(S.lastWorldView === 'cab' ? 'tank' : 'cab');
   if (k === 'q') S.zoom = clamp(S.zoom / 1.2, S.minZoom, S.maxZoom);
   if (k === 'e') S.zoom = clamp(S.zoom * 1.2, S.minZoom, S.maxZoom);
   if (S.player) {
@@ -2360,16 +2378,16 @@ function applyPlayerInput(dt) {
     const rawX = clamp(dx / maxR, -1, 1);
     const rawY = clamp(dy / maxR, -1, 1);
 
-    // Steer: X-axis with small dead zone + mild expo curve
+    // X-axis slews the TURRET (the hull follows the gun when moving — see below)
     const steerDead = 0.12;
     const absX = Math.abs(rawX);
-    if (absX < steerDead) {
-      p.steer = 0;
-    } else {
+    if (absX >= steerDead) {
       const sign = Math.sign(rawX);
       const t = (absX - steerDead) / (1 - steerDead);
-      p.steer = sign * Math.min(1, t * (1 + t * 0.4));  // mild expo for finer control
-    }
+      const rate = sign * Math.min(1, t * (1 + t * 0.4));
+      p.turretTarget = normAngle(p.turretTarget + rate * 1.7 * dt);
+      p.stickSlew = true;
+    } else p.stickSlew = false;
 
     // Gear: direct Y position (sticky WHILE held, releases to 0 on lift)
     // -rawY because screen Y grows downward (push UP = negative dy)
@@ -2380,32 +2398,62 @@ function applyPlayerInput(dt) {
     else if (up < -0.30) p.targetGear = -1;
     else                 p.targetGear = 0;
   } else {
-    // Release: brake to stop, straighten
-    p.steer = 0;
+    // Release: brake to stop
     p.targetGear = 0;
+    p.stickSlew = false;
   }
 
-  // --- Keyboard steering (overrides touch when a key is pressed) ---
+  // --- Keyboard A/D slew the turret too ---
   let kSteer = 0;
   if (Input.keys['a'] || Input.keys['arrowleft']) kSteer -= 1;
   if (Input.keys['d'] || Input.keys['arrowright']) kSteer += 1;
-  if (kSteer !== 0) p.steer = kSteer;
+  if (kSteer !== 0) { p.turretTarget = normAngle(p.turretTarget + kSteer * 1.7 * dt); p.stickSlew = true; }
 
   // --- Turret aim ---
   // Gyro takes priority over touch/mouse when enabled
   if (Gyro.enabled) {
     Gyro.applyToPlayer(dt);
   } else {
-    // Mouse (desktop)
-    if (Input.mouseX && window.innerWidth > 640) {
-      const wx = screenToWorld(Input.mouseX, Input.mouseY);
-      p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
+    if (S.view === 'cab') {
+      // Gunner view: drag to slew the turret (touch), or mouse offset from centre = slew rate (desktop)
+      const w = window.innerWidth;
+      if (Input.aimTouch.active) {
+        const dx = Input.aimTouch.x - Input.aimTouch.lastX;
+        Input.aimTouch.lastX = Input.aimTouch.x; Input.aimTouch.lastY = Input.aimTouch.y;
+        if (dx) p.turretTarget = normAngle(p.turretTarget + dx * (CAB.fov / w) * 1.15);
+      } else if (Input.mouseX && w > 640 && Input.mouseDown) {
+        const off = (Input.mouseX - w / 2) / (w / 2);
+        if (Math.abs(off) > 0.08) p.turretTarget = normAngle(p.turretAngle + off * 0.9);
+      } else if (Input.mouseX && w > 640 && !p.stickSlew && Input.mouseMoved) {
+        // Hover: aim where the mouse points on the ground (only while the mouse is actually moving)
+        const off = (Input.mouseX - w / 2) / (w / 2);
+        p.turretTarget = normAngle(CAB.yaw + off * (CAB.fov / 2));
+      }
+    } else {
+      // Mouse (desktop)
+      if (Input.mouseX && window.innerWidth > 640) {
+        const wx = screenToWorld(Input.mouseX, Input.mouseY);
+        p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
+      }
+      // Touch aim
+      if (Input.aimTouch.active) {
+        const wx = screenToWorld(Input.aimTouch.x, Input.aimTouch.y);
+        p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
+      }
     }
-    // Touch aim
-    if (Input.aimTouch.active) {
-      const wx = screenToWorld(Input.aimTouch.x, Input.aimTouch.y);
-      p.turretTarget = Math.atan2(wx.y - p.y, wx.x - p.x);
-    }
+  }
+
+  // --- Turret steering: the hull swings to follow the gun whenever the tank is moving.
+  //     Stationary = free aim (no pivoting while you line up a shot). ---
+  const moving = p.targetGear !== 0 || Math.abs(p.speed) > 4;
+  if (moving) {
+    const diff = angleDiff(p.hullAngle, p.turretTarget);
+    let st = clamp(diff * 2.4, -1, 1);
+    if (Math.abs(diff) < 0.015) st = 0;
+    if (p.speed < 0) st = -st;            // Tank.update flips steer in reverse; keep the hull chasing the gun
+    p.steer = st;
+  } else {
+    p.steer = 0;
   }
 
   // --- Elevation (arrow up/down held; '0' = direct fire) ---
@@ -2608,8 +2656,10 @@ function initWorld() {
   S.playerDeaths = 0;
   S.scoreBlue = 0;
   S.scoreRed = 0;
-  S.view = 'tank';
+  S.view = 'cab';
+  S.lastWorldView = 'cab';
   S.zoom = 0.65;
+  CAB.yaw = 0;
   S.airdropCooldown = 0;
   S.medicCooldown = 0;
   S.smokeCooldown = 0;
@@ -2864,6 +2914,7 @@ function update(dt) {
 
   // Inputs
   applyPlayerInput(dt);
+  Input._mouseIdle += dt; if (Input._mouseIdle > 0.4) Input.mouseMoved = false;
 
   // AI
   for (const t of S.tanks) {
@@ -3006,7 +3057,7 @@ function update(dt) {
   }
 
   // Camera follow player (position direct, angle lightly smoothed)
-  if (S.player && S.view === 'tank') {
+  if (S.player && S.view !== 'map') {
     S.cam.x = S.player.x;
     S.cam.y = S.player.y;
     if (S.player.alive) {
@@ -3031,13 +3082,14 @@ function render() {
 
   // Main view
   if (S.view === 'map') renderMapView();
+  else if (S.view === 'cab') renderCabView();
   else renderTankView();
 
   // Picture-in-picture of the OTHER view, always visible
   if (S.mode === 'play') {
     const rect = getMiniViewRect();
-    if (S.view === 'tank') {
-      // Driver is main, show tactical minimap in corner
+    if (S.view !== 'map') {
+      // Driver / gunner is main, show tactical minimap in corner
       renderTacticalMinimap(rect.x, rect.y, rect.w, rect.h);
     } else {
       // Map is main, show mini driver view in corner
@@ -3692,6 +3744,476 @@ function drawAirdrops() {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('SUP', a.x, a.y);
     }
+  }
+}
+
+/* ============== GUNNER VIEW (first-person, pseudo-3D) ============== */
+/* Camera sits on the turret roof and looks along the gun. World points are
+   projected with a simple pinhole camera: forward distance divides screen
+   offsets. Everything is sorted by depth and drawn back to front. Ground is a
+   flat plane with a perspective grid; terrain discs become ground ellipses;
+   trees, rocks, buildings and tanks are drawn as boxes / billboards. */
+
+const CAB = {
+  M_PER_UNIT: 1 / 8,   // display only: 8 world units ≈ 1 m (a tank hull is ~7 m)
+  fov: 72 * Math.PI / 180,
+  eyeH: 15,        // camera height above ground (turret roof)
+  near: 6,
+  far: 2600,
+  horizon: 0.44,   // horizon line as a fraction of screen height
+  yaw: 0,          // smoothed view direction (follows the turret)
+  pitchPx: 0,      // small screen-space bob from recoil
+};
+
+// Build camera basis for this frame
+function cabCamera() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const p = S.player;
+  const f = (w / 2) / Math.tan(CAB.fov / 2);
+  const yaw = CAB.yaw;
+  return {
+    w, h, f, yaw,
+    cx: p ? p.x : WORLD_W / 2, cy: p ? p.y : WORLD_H / 2,
+    cos: Math.cos(yaw), sin: Math.sin(yaw),
+    hz: h * CAB.horizon + CAB.pitchPx,
+  };
+}
+
+// World (x, y, z) -> camera space {fwd, right, up}
+function cabToCam(c, x, y, z) {
+  const dx = x - c.cx, dy = y - c.cy;
+  return { fwd: dx * c.cos + dy * c.sin, right: -dx * c.sin + dy * c.cos, up: (z || 0) - CAB.eyeH };
+}
+// Camera space -> screen
+function cabProjCam(c, v) {
+  const s = c.f / v.fwd;
+  return { x: c.w / 2 + v.right * s, y: c.hz - v.up * s, s, d: v.fwd };
+}
+function cabProject(c, x, y, z) {
+  const v = cabToCam(c, x, y, z);
+  if (v.fwd < CAB.near) return null;
+  return cabProjCam(c, v);
+}
+// Clip a 3D segment to the near plane, then project; returns [p0, p1] or null
+function cabSegment(c, x0, y0, z0, x1, y1, z1) {
+  let a = cabToCam(c, x0, y0, z0), b = cabToCam(c, x1, y1, z1);
+  if (a.fwd < CAB.near && b.fwd < CAB.near) return null;
+  if (a.fwd < CAB.near || b.fwd < CAB.near) {
+    const t = (CAB.near - a.fwd) / (b.fwd - a.fwd);
+    const m = { fwd: CAB.near, right: a.right + (b.right - a.right) * t, up: a.up + (b.up - a.up) * t };
+    if (a.fwd < CAB.near) a = m; else b = m;
+  }
+  return [cabProjCam(c, a), cabProjCam(c, b)];
+}
+// Ground disc (circle on the plane, optional height) -> screen polygon; null if mostly behind
+function cabDisc(c, x, y, r, z = 0, n = 28) {
+  const pts = [];
+  let behind = 0;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU;
+    const v = cabToCam(c, x + Math.cos(a) * r, y + Math.sin(a) * r, z);
+    if (v.fwd < CAB.near) { behind++; v.fwd = CAB.near; }
+    pts.push(cabProjCam(c, v));
+  }
+  if (behind > n * 0.6) return null;
+  return pts;
+}
+function cabPoly(pts) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+}
+// Distance fog: 1 = fully visible
+function cabFog(d) {
+  const M = S.mapSpec || MAPS.FOREST;
+  const sight = (S.player ? S.player.spec.sight : 1000) * (M.sightMultiplier || 1);
+  return clamp(1 - (d - sight * 0.55) / (sight * 0.75), 0.08, 1);
+}
+function withAlpha(col, a) {
+  // col is '#rrggbb'
+  const r = parseInt(col.slice(1, 3), 16), g = parseInt(col.slice(3, 5), 16), b = parseInt(col.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+function shade(col, k) {
+  const r = parseInt(col.slice(1, 3), 16), g = parseInt(col.slice(3, 5), 16), b = parseInt(col.slice(5, 7), 16);
+  return `rgb(${Math.round(r * k)}, ${Math.round(g * k)}, ${Math.round(b * k)})`;
+}
+
+// Axis-aligned-in-local-frame box: center (x,y), half sizes hw (along heading) / hh, height zTop, rotated by ang
+function cabBox(c, x, y, ang, hw, hh, z0, z1, col, outline) {
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const corners = [[hw, hh], [hw, -hh], [-hw, -hh], [-hw, hh]].map(([u, v]) => ({
+    x: x + u * ca - v * sa, y: y + u * sa + v * ca,
+  }));
+  const camLo = corners.map(k => cabToCam(c, k.x, k.y, z0));
+  const camHi = corners.map(k => cabToCam(c, k.x, k.y, z1));
+  if (camLo.some(v => v.fwd < CAB.near)) return;   // too close: skip (player's own tank is never drawn)
+  const lo = camLo.map(v => cabProjCam(c, v)), hi = camHi.map(v => cabProjCam(c, v));
+  // Walls, sorted far -> near
+  const walls = [];
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    const d = (camLo[i].fwd + camLo[j].fwd) / 2;
+    // light from the camera's left-front: shade by wall orientation
+    const nx = corners[j].y - corners[i].y, ny = -(corners[j].x - corners[i].x);
+    const nl = Math.hypot(nx, ny) || 1;
+    const light = 0.62 + 0.38 * Math.max(0, (-nx * c.cos - ny * c.sin) / nl * 0.6 + (nx * c.sin - ny * c.cos) / nl * 0.4);
+    walls.push({ d, light, pts: [lo[i], lo[j], hi[j], hi[i]] });
+  }
+  walls.sort((a, b) => b.d - a.d);
+  for (const wl of walls) {
+    ctx.fillStyle = shade(col, wl.light);
+    cabPoly(wl.pts); ctx.fill();
+    if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+  ctx.fillStyle = shade(col, 1.08);
+  cabPoly(hi); ctx.fill();
+  if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+function renderCabView() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const p = S.player;
+  const M = S.mapSpec || MAPS.FOREST;
+  if (!p) { ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, w, h); return; }
+
+  // Smooth the view yaw toward the turret
+  const targetYaw = p.alive ? p.turretAngle : CAB.yaw;
+  CAB.yaw = normAngle(CAB.yaw + angleDiff(CAB.yaw, targetYaw) * 0.6);
+  CAB.pitchPx = -p.recoil * 10;
+  const c = cabCamera();
+
+  // --- Sky + ground ---
+  const sky = ctx.createLinearGradient(0, 0, 0, c.hz);
+  sky.addColorStop(0, M.name === 'SNOW' ? '#6d7b88' : M.name === 'DESERT' ? '#5a4a35' : M.name === 'URBAN' ? '#2a2a30' : '#121a14');
+  sky.addColorStop(1, M.name === 'SNOW' ? '#b8c2ca' : M.name === 'DESERT' ? '#a08252' : M.name === 'URBAN' ? '#55555e' : '#2c3a2a');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, c.hz);
+  const gnd = ctx.createLinearGradient(0, c.hz, 0, h);
+  gnd.addColorStop(0, M.groundDark); gnd.addColorStop(0.25, M.ground); gnd.addColorStop(1, M.ground);
+  ctx.fillStyle = gnd; ctx.fillRect(0, c.hz, w, h - c.hz);
+  // Haze band on the horizon
+  const haze = ctx.createLinearGradient(0, c.hz - 24, 0, c.hz + 40);
+  haze.addColorStop(0, 'rgba(255,255,255,0)'); haze.addColorStop(0.45, 'rgba(255,255,255,0.10)'); haze.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = haze; ctx.fillRect(0, c.hz - 24, w, 64);
+
+  // --- Perspective grid (world grid lines, clipped to the near plane) ---
+  const gs = 200, R = 1400;
+  ctx.strokeStyle = M.grid; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let gx = Math.floor((c.cx - R) / gs) * gs; gx <= c.cx + R; gx += gs) {
+    if (gx < 0 || gx > WORLD_W) continue;
+    const seg = cabSegment(c, gx, Math.max(0, c.cy - R), 0, gx, Math.min(WORLD_H, c.cy + R), 0);
+    if (seg) { ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); }
+  }
+  for (let gy = Math.floor((c.cy - R) / gs) * gs; gy <= c.cy + R; gy += gs) {
+    if (gy < 0 || gy > WORLD_H) continue;
+    const seg = cabSegment(c, Math.max(0, c.cx - R), gy, 0, Math.min(WORLD_W, c.cx + R), gy, 0);
+    if (seg) { ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); }
+  }
+  ctx.stroke();
+  // Streets on grid maps
+  if (M.layout === 'grid') {
+    ctx.strokeStyle = 'rgba(210, 190, 90, 0.25)'; ctx.setLineDash([14, 10]); ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = M.gridX0 + M.gridPitchX / 2; x < WORLD_W - 500; x += M.gridPitchX) {
+      if (Math.abs(x - c.cx) > R) continue;
+      const seg = cabSegment(c, x, Math.max(0, c.cy - R), 0, x, Math.min(WORLD_H, c.cy + R), 0);
+      if (seg) { ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); }
+    }
+    for (let y = M.gridY0 + M.gridPitchY / 2; y < WORLD_H - 200; y += M.gridPitchY) {
+      if (Math.abs(y - c.cy) > R) continue;
+      const seg = cabSegment(c, Math.max(0, c.cx - R), y, 0, Math.min(WORLD_W, c.cx + R), y, 0);
+      if (seg) { ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); }
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // World edge
+  ctx.strokeStyle = M.border; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (const [x0, y0, x1, y1] of [[0, 0, WORLD_W, 0], [WORLD_W, 0, WORLD_W, WORLD_H], [WORLD_W, WORLD_H, 0, WORLD_H], [0, WORLD_H, 0, 0]]) {
+    const seg = cabSegment(c, x0, y0, 0, x1, y1, 0);
+    if (seg) { ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); }
+  }
+  ctx.stroke();
+
+  // --- Flat ground decals, far to near: bases, hills, pits, ice, treads ---
+  const decals = [];
+  for (const base of [BLUE_BASE, RED_BASE]) decals.push({ d: cabToCam(c, base.x, base.y, 0).fwd, kind: 'base', o: base });
+  for (const o of S.hills) decals.push({ d: cabToCam(c, o.x, o.y, 0).fwd, kind: 'hill', o });
+  for (const o of S.pits)  decals.push({ d: cabToCam(c, o.x, o.y, 0).fwd, kind: 'pit', o });
+  for (const o of S.ice)   decals.push({ d: cabToCam(c, o.x, o.y, 0).fwd, kind: 'ice', o });
+  for (const l of S.luminous) decals.push({ d: cabToCam(c, l.x, l.y, 0).fwd, kind: 'lum', o: l });
+  decals.sort((a, b) => b.d - a.d);
+  for (const dc of decals) {
+    const o = dc.o;
+    if (dc.d < -o.r || dc.d > CAB.far) continue;
+    if (dc.kind === 'hill') {
+      const base = cabDisc(c, o.x, o.y, o.r, 0);
+      const top = cabDisc(c, o.x, o.y, o.r * 0.55, 34);
+      if (base) { ctx.fillStyle = withAlpha(M.hillTint, 0.9); cabPoly(base); ctx.fill(); }
+      if (top)  { ctx.fillStyle = withAlpha(M.hillRim, 0.75); cabPoly(top); ctx.fill(); }
+      continue;
+    }
+    const pts = cabDisc(c, o.x, o.y, o.r, 0);
+    if (!pts) continue;
+    if (dc.kind === 'base') {
+      const blue = o.team === 'blue';
+      ctx.fillStyle = blue ? COLORS.blueBase : COLORS.redBase;
+      cabPoly(pts); ctx.fill();
+      ctx.strokeStyle = blue ? COLORS.blueBaseEdge : COLORS.redBaseEdge; ctx.lineWidth = 2; ctx.setLineDash([8, 8]); ctx.stroke(); ctx.setLineDash([]);
+    } else if (dc.kind === 'pit') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)'; cabPoly(pts); ctx.fill();
+    } else if (dc.kind === 'ice') {
+      ctx.fillStyle = 'rgba(220, 240, 255, 0.55)'; cabPoly(pts); ctx.fill();
+      ctx.strokeStyle = 'rgba(120, 160, 200, 0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    } else if (dc.kind === 'lum') {
+      ctx.fillStyle = `rgba(120, 255, 160, ${0.12 * clamp(o.life / 0.1, 0, 1)})`; cabPoly(pts); ctx.fill();
+    }
+  }
+  // Tread marks (short, nearby only)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (const t of S.tanks) for (const tr of t.treads) {
+    const v = cabToCam(c, tr.x, tr.y, 0);
+    if (v.fwd < CAB.near || v.fwd > 500) continue;
+    const ca = Math.cos(tr.angle + Math.PI / 2) * 9, sa = Math.sin(tr.angle + Math.PI / 2) * 9;
+    for (const sgn of [1, -1]) {
+      const q = cabProject(c, tr.x + ca * sgn, tr.y + sa * sgn, 0);
+      if (q) { ctx.moveTo(q.x - 1, q.y); ctx.lineTo(q.x + 1, q.y); }
+    }
+  }
+  ctx.stroke();
+
+  // --- Depth-sorted objects: obstacles, tanks, airdrops, smoke, bullets, effects ---
+  const items = [];
+  const push = (x, y, kind, o, extra) => {
+    const v = cabToCam(c, x, y, 0);
+    if (v.fwd < -60 || v.fwd > CAB.far) return;
+    if (Math.abs(v.right) > v.fwd * 1.6 + 120) return; // outside the frustum
+    items.push({ d: v.fwd, kind, o, v, extra });
+  };
+  for (const o of S.obstacles) push(o.x, o.y, 'ob', o);
+  for (const t of S.tanks) {
+    if (t.isPlayer) continue;
+    const visible = t.team === 'blue' || (S.playerSpotted.get(t.id) || 0) > S.time;
+    if (!visible && t.alive) continue;
+    if (Math.hypot(t.x - p.x, t.y - p.y) < 34) continue;   // overlapping us — would fill the screen
+    push(t.x, t.y, 'tank', t);
+  }
+  for (const a of S.airdrops) push(a.x, a.y, 'drop', a);
+  for (const s of S.smokeScreens) push(s.x, s.y, 'smoke', s);
+  for (const b of S.bullets) push(b.x, b.y, 'bullet', b);
+  for (const e of S.effects) push(e.x, e.y, e instanceof Explosion ? 'boom' : e instanceof Spark ? 'spark' : e instanceof Smoke ? 'puff' : 'flash', e);
+  items.sort((a, b) => b.d - a.d);
+
+  for (const it of items) {
+    const o = it.o, fog = cabFog(it.d);
+    ctx.globalAlpha = fog;
+    if (it.kind === 'ob') {
+      if (o.kind === 'building') {
+        const half = o.r * 0.75;
+        cabBox(c, o.x, o.y, 0, half, half, 0, o.h, o.h > 100 ? '#5a5a62' : o.h > 75 ? '#55504c' : '#4c4a46', 'rgba(0,0,0,0.35)');
+      } else if (o.kind === 'rock') {
+        const sh = cabDisc(c, o.x + 3, o.y + 3, o.r, 0);
+        if (sh) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; cabPoly(sh); ctx.fill(); }
+        cabBox(c, o.x, o.y, o.seed * 1.2, o.r * 0.8, o.r * 0.65, 0, o.r * 0.9, '#4a4238', '#2a241e');
+      } else {
+        // Tree: trunk + layered canopy
+        const base = cabProject(c, o.x, o.y, 0);
+        const top = cabProject(c, o.x, o.y, o.r * 1.9);
+        if (!base || !top) { ctx.globalAlpha = 1; continue; }
+        const sh = cabDisc(c, o.x + 4, o.y + 4, o.r * 0.9, 0);
+        if (sh) { ctx.fillStyle = 'rgba(0,0,0,0.28)'; cabPoly(sh); ctx.fill(); }
+        ctx.strokeStyle = '#2a1e14'; ctx.lineWidth = Math.max(1, 4 * base.s);
+        ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(top.x, (base.y + top.y) / 2); ctx.stroke();
+        const snow = o.kind === 'snowtree';
+        const rs = o.r * top.s;
+        ctx.fillStyle = snow ? '#2a4028' : '#2e4423';
+        ctx.beginPath(); ctx.ellipse(top.x, (base.y + top.y) / 2 - rs * 0.1, rs, rs * 1.15, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = snow ? '#3a5438' : '#3e5a2f';
+        ctx.beginPath(); ctx.ellipse(top.x - rs * 0.2, (base.y + top.y) / 2 - rs * 0.35, rs * 0.7, rs * 0.8, 0, 0, TAU); ctx.fill();
+        if (snow) { ctx.fillStyle = 'rgba(240,248,252,0.85)'; ctx.beginPath(); ctx.ellipse(top.x, (base.y + top.y) / 2 - rs * 0.6, rs * 0.55, rs * 0.35, 0, 0, TAU); ctx.fill(); }
+      }
+    } else if (it.kind === 'tank') {
+      const t = o, sp = t.spec;
+      const col = t.alive ? sp.hullCol : '#2a2a24';
+      const sh = cabDisc(c, t.x, t.y, sp.size.h * 0.6, 0, 12);
+      if (sh) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; cabPoly(sh); ctx.fill(); }
+      cabBox(c, t.x, t.y, t.hullAngle, sp.size.h / 2, sp.size.w / 2, 0, 11, col, 'rgba(0,0,0,0.4)');
+      if (t.alive) {
+        cabBox(c, t.x, t.y, t.turretAngle, sp.turretSize.h / 2, sp.turretSize.w / 2, 11, 19, sp.turretCol, 'rgba(0,0,0,0.4)');
+        const b0 = cabProject(c, t.x + Math.cos(t.turretAngle) * sp.turretSize.h * 0.4, t.y + Math.sin(t.turretAngle) * sp.turretSize.h * 0.4, 16);
+        const b1 = cabProject(c, t.x + Math.cos(t.turretAngle) * sp.barrelLen, t.y + Math.sin(t.turretAngle) * sp.barrelLen, 16);
+        if (b0 && b1) { ctx.strokeStyle = sp.trimCol; ctx.lineWidth = Math.max(1, sp.barrelWidth * b0.s); ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.stroke(); }
+        // Label + HP bar above
+        const lp = cabProject(c, t.x, t.y, 34);
+        if (lp && it.d < 900) {
+          const bw = clamp(60 * lp.s * 10, 18, 60);
+          const frac = clamp(t.hp / t.maxHp, 0, 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(lp.x - bw / 2, lp.y - 4, bw, 4);
+          ctx.fillStyle = t.team === 'blue' ? COLORS.blue : COLORS.red; ctx.fillRect(lp.x - bw / 2, lp.y - 4, bw * frac, 4);
+          ctx.fillStyle = t.team === 'blue' ? COLORS.blue : COLORS.red;
+          ctx.font = 'bold 9px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+          ctx.fillText((t.team === 'blue' ? 'BLU-' : 'RED-') + t.id.slice(-2).toUpperCase() + '  ' + Math.round(it.d * CAB.M_PER_UNIT) + 'm', lp.x, lp.y - 6);
+        }
+        if (t.lastHit > 0) { ctx.fillStyle = `rgba(255,255,255,${t.lastHit * 0.35})`; const hp = cabProject(c, t.x, t.y, 10); if (hp) { ctx.beginPath(); ctx.arc(hp.x, hp.y, 20 * hp.s * 10, 0, TAU); ctx.fill(); } }
+      }
+    } else if (it.kind === 'drop') {
+      const z = o.z || 0;
+      const col = o.kind === 'medic' ? '#d46a5a' : '#c9a85a';
+      if (!o.landed) {
+        const chute = cabProject(c, o.x, o.y, z + 40);
+        if (chute) { ctx.fillStyle = withAlpha(col, 0.8); ctx.beginPath(); ctx.arc(chute.x, chute.y, 26 * chute.s, Math.PI, TAU); ctx.fill(); }
+      }
+      cabBox(c, o.x, o.y, 0.3, 10, 10, z, z + 12, col, 'rgba(0,0,0,0.5)');
+    } else if (it.kind === 'smoke') {
+      const r = o.losRadius();
+      const q = cabProject(c, o.x, o.y, r * 0.35);
+      if (q) {
+        const a = clamp(o.life / o.maxLife, 0, 1) * 0.75;
+        const grd = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, r * q.s);
+        grd.addColorStop(0, `rgba(225, 225, 225, ${a})`); grd.addColorStop(0.7, `rgba(200, 200, 200, ${a * 0.6})`); grd.addColorStop(1, 'rgba(200,200,200,0)');
+        ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(q.x, q.y, r * q.s, 0, TAU); ctx.fill();
+      }
+    } else if (it.kind === 'bullet') {
+      const b = o, spec = b.spec;
+      const q = cabProject(c, b.x, b.y, 8 + b.z);
+      if (!q) continue;
+      if (b.trail.length > 1) {
+        const t0 = b.trail[0];
+        const q0 = cabProject(c, t0.x, t0.y, 8 + b.z);
+        if (q0) { ctx.strokeStyle = withAlpha(spec.tracer.length === 7 ? spec.tracer : '#ffcc55', 0.55); ctx.lineWidth = Math.max(1, spec.size * q.s * 4); ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+      }
+      ctx.fillStyle = spec.color; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1.5, spec.size * q.s * 6), 0, TAU); ctx.fill();
+      if (b.z > 2) { const g = cabProject(c, b.x, b.y, 0); if (g) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(g.x, g.y, Math.max(1, 3 * g.s * 4), 0, TAU); ctx.fill(); } }
+    } else if (it.kind === 'boom') {
+      const t = o.life / o.maxLife, r = o.radius * (0.3 + t * 0.9);
+      const q = cabProject(c, o.x, o.y, r * 0.5);
+      if (q) {
+        const rs = r * q.s;
+        const grd = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, rs);
+        grd.addColorStop(0, `rgba(255, 240, 200, ${(1 - t) * 0.9})`); grd.addColorStop(0.4, `rgba(255, 140, 60, ${(1 - t) * 0.7})`); grd.addColorStop(1, 'rgba(255, 60, 20, 0)');
+        ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(q.x, q.y, rs, 0, TAU); ctx.fill();
+      }
+    } else if (it.kind === 'spark') {
+      const t = 1 - o.life / o.maxLife;
+      ctx.fillStyle = o.ricochet ? `rgba(255, 220, 120, ${t})` : `rgba(255, 160, 80, ${t})`;
+      for (const pt of o.particles) {
+        const q = cabProject(c, o.x + pt.x, o.y + pt.y, 8 + Math.abs(pt.y) * 0.3);
+        if (q) { ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(1, 2 * q.s * 6), 0, TAU); ctx.fill(); }
+      }
+    } else if (it.kind === 'puff') {
+      const t = o.life / o.maxLife;
+      const q = cabProject(c, o.x, o.y, 6 + t * 30);
+      if (q) { ctx.fillStyle = `rgba(90, 90, 90, ${(1 - t) * 0.5})`; ctx.beginPath(); ctx.arc(q.x, q.y, o.radius * (1 + t * 1.5) * q.s * 4, 0, TAU); ctx.fill(); }
+    } else if (it.kind === 'flash') {
+      const t = 1 - o.life / o.maxLife;
+      const q = cabProject(c, o.x, o.y, 16);
+      if (q) { ctx.fillStyle = `rgba(255, 230, 160, ${t})`; ctx.beginPath(); ctx.arc(q.x, q.y, 10 * o.s * q.s * 6, 0, TAU); ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Weather over the world ---
+  Weather.render(ctx);
+
+  // --- Own gun: barrel from bottom centre toward the reticle, with recoil ---
+  const rec = p.recoil * 26;
+  const bx = w / 2, by = h + rec;
+  const bw0 = Math.max(26, w * 0.05), bw1 = bw0 * 0.42;
+  const tipY = c.hz + (h - c.hz) * 0.42 + rec * 0.4;
+  const g1 = ctx.createLinearGradient(bx - bw0, 0, bx + bw0, 0);
+  g1.addColorStop(0, '#2a2e26'); g1.addColorStop(0.45, '#5a6150'); g1.addColorStop(0.55, '#6a715e'); g1.addColorStop(1, '#23261f');
+  ctx.fillStyle = g1;
+  ctx.beginPath(); ctx.moveTo(bx - bw0, by); ctx.lineTo(bx - bw1, tipY); ctx.lineTo(bx + bw1, tipY); ctx.lineTo(bx + bw0, by); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#141612'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#1a1d16'; ctx.fillRect(bx - bw1 * 1.25, tipY - 6, bw1 * 2.5, 9);   // muzzle brake
+  // Turret roof / hatch silhouette along the bottom
+  ctx.fillStyle = '#20241d';
+  ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, h - 26 + rec); ctx.quadraticCurveTo(w / 2, h - 70 + rec, w, h - 26 + rec); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+  // Own muzzle flash
+  for (const e of S.effects) if (e instanceof MuzzleFlash && Math.hypot(e.x - p.x, e.y - p.y) < p.spec.barrelLen + 8) {
+    const t = 1 - e.life / e.maxLife;
+    ctx.fillStyle = `rgba(255, 230, 160, ${t * 0.9})`;
+    ctx.beginPath(); ctx.arc(bx, tipY - 8, 22 + 30 * t, 0, TAU); ctx.fill();
+  }
+
+  // --- Gunsight ---
+  const cy = c.hz + (h - c.hz) * 0.18;  // where a level shot converges on flat ground at mid range
+  const sightCol = p.elevation > 0.02 ? 'rgba(201, 168, 90, 0.95)' : 'rgba(212, 106, 90, 0.95)';
+  ctx.strokeStyle = sightCol; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(w / 2, cy, 26, 0, TAU);
+  ctx.moveTo(w / 2 - 44, cy); ctx.lineTo(w / 2 - 12, cy);
+  ctx.moveTo(w / 2 + 12, cy); ctx.lineTo(w / 2 + 44, cy);
+  ctx.moveTo(w / 2, cy - 44); ctx.lineTo(w / 2, cy - 12);
+  ctx.moveTo(w / 2, cy + 12); ctx.lineTo(w / 2, cy + 44);
+  ctx.stroke();
+  ctx.fillStyle = sightCol; ctx.beginPath(); ctx.arc(w / 2, cy, 2, 0, TAU); ctx.fill();
+  // Range ladder down the centre
+  ctx.font = '8px ui-monospace, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(214, 210, 195, 0.55)';
+  let lastLadderY = -99;
+  for (const rng of [400, 800, 1200]) {
+    const q = cabProject(c, p.x + c.cos * rng, p.y + c.sin * rng, 0);
+    if (!q || q.y > h - 80 || Math.abs(q.y - cy) < 14 || Math.abs(q.y - lastLadderY) < 11) continue;
+    lastLadderY = q.y;
+    ctx.strokeStyle = 'rgba(214, 210, 195, 0.3)'; ctx.beginPath(); ctx.moveTo(w / 2 + 30, q.y); ctx.lineTo(w / 2 + 40, q.y); ctx.stroke();
+    ctx.fillText(Math.round(rng * CAB.M_PER_UNIT) + 'm', w / 2 + 44, q.y);
+  }
+  // Lob landing marker
+  if (p.elevation > 0.02 && p.alive) {
+    const spec = AMMO[p.selectedAmmo];
+    const ld = arcLandDist(p.elevation, spec);
+    const land = cabDisc(c, p.x + Math.cos(p.turretAngle) * ld, p.y + Math.sin(p.turretAngle) * ld, spec.splashR || 24, 0, 20);
+    if (land) { ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2; cabPoly(land); ctx.stroke(); }
+    const lx = p.x + Math.cos(p.turretAngle) * ld, ly = p.y + Math.sin(p.turretAngle) * ld;
+    const q = cabProject(c, lx, ly, 0), qt = cabProject(c, lx, ly, 60);
+    if (q && qt) {
+      ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(qt.x, qt.y); ctx.stroke();
+      ctx.fillStyle = COLORS.accent; ctx.beginPath(); ctx.moveTo(qt.x, qt.y); ctx.lineTo(qt.x - 6, qt.y - 10); ctx.lineTo(qt.x + 6, qt.y - 10); ctx.closePath(); ctx.fill();
+      ctx.font = 'bold 10px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('LOB ' + Math.round(ld * CAB.M_PER_UNIT) + 'm', qt.x, qt.y - 12);
+    }
+  }
+  // Turret slewing: ghost marker where the turret is heading
+  const off = angleDiff(p.turretAngle, p.turretTarget);
+  if (Math.abs(off) > 0.03 && p.alive) {
+    const q = cabProject(c, p.x + Math.cos(p.turretTarget) * 450, p.y + Math.sin(p.turretTarget) * 450, 0);
+    if (q) { ctx.strokeStyle = 'rgba(212, 106, 90, 0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(q.x, Math.min(q.y, cy), 7, 0, TAU); ctx.stroke(); }
+    else {
+      // Target is behind the camera: edge arrow
+      const dir = Math.sign(off);
+      ctx.fillStyle = 'rgba(212, 106, 90, 0.7)';
+      ctx.beginPath(); ctx.moveTo(w / 2 + dir * (w * 0.3), cy); ctx.lineTo(w / 2 + dir * (w * 0.3 - 14), cy - 8); ctx.lineTo(w / 2 + dir * (w * 0.3 - 14), cy + 8); ctx.closePath(); ctx.fill();
+    }
+  }
+  // Hull heading tape: where the hull points relative to the gun
+  const hullOff = angleDiff(c.yaw, p.hullAngle);
+  const tapeW = Math.min(260, w * 0.36), ty = 78;
+  ctx.fillStyle = 'rgba(13, 14, 12, 0.45)'; ctx.fillRect(w / 2 - tapeW / 2, ty - 8, tapeW, 16);
+  ctx.strokeStyle = COLORS.hudBorder; ctx.lineWidth = 1; ctx.strokeRect(w / 2 - tapeW / 2, ty - 8, tapeW, 16);
+  for (let a = -180; a <= 180; a += 30) {
+    const rel = angleDiff(c.yaw, a * Math.PI / 180);
+    if (Math.abs(rel) > CAB.fov / 2 * 1.6) continue;
+    const x = w / 2 + rel / (CAB.fov / 2 * 1.6) * tapeW / 2;
+    ctx.strokeStyle = 'rgba(214, 210, 195, 0.4)'; ctx.beginPath(); ctx.moveTo(x, ty - 8); ctx.lineTo(x, ty - 3); ctx.stroke();
+  }
+  const hx = w / 2 + clamp(hullOff / (CAB.fov / 2 * 1.6), -1, 1) * tapeW / 2;
+  ctx.fillStyle = COLORS.accent;
+  ctx.beginPath(); ctx.moveTo(hx, ty + 8); ctx.lineTo(hx - 6, ty - 1); ctx.lineTo(hx + 6, ty - 1); ctx.closePath(); ctx.fill();
+  ctx.font = '8px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  if (Math.abs(hullOff) <= CAB.fov / 2 * 1.6) { ctx.fillStyle = COLORS.textDim; ctx.fillText('HULL', hx, ty - 9); }
+  else {
+    ctx.fillStyle = COLORS.accent; ctx.textBaseline = 'middle'; ctx.textAlign = hullOff > 0 ? 'right' : 'left';
+    ctx.fillText(hullOff > 0 ? 'HULL ▶' : '◀ HULL', w / 2 + (hullOff > 0 ? tapeW / 2 - 4 : -tapeW / 2 + 4), ty);
+  }
+  // Damage vignette
+  if (p.lastHit > 0) {
+    const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.7);
+    vg.addColorStop(0, 'rgba(212, 60, 40, 0)'); vg.addColorStop(1, `rgba(212, 60, 40, ${p.lastHit * 0.45})`);
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
   }
 }
 
@@ -4795,7 +5317,6 @@ function init() {
 
 init();
 </script>
-
 <script>
 // Offline: service worker caches the whole game on first load
 if ('serviceWorker' in navigator) {
