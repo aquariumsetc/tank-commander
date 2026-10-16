@@ -1,5 +1,5 @@
 // Tank Commander offline cache — bump VERSION on every deploy
-const VERSION = 'tc-v2.6.0';
+const VERSION = 'tc-v2.7.0';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

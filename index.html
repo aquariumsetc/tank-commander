@@ -273,11 +273,11 @@ html, body {
 
   <div class="controls-info">
     <strong>View:</strong> You start in the <strong>gunner's sight</strong> — a first-person view down the barrel; the gold HULL marker shows which way the tracks point. Tap <strong>VIEW</strong> (or say "top down") for the overhead driver cam. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
-    <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Stick left/right also slews the turret. When you're stopped, the hull stays put so you can aim freely. Tap <strong>LOCK</strong> to have the turret track the enemy you're looking at (leads moving targets; tap again to release). Hold <strong>◀ / ▶</strong> next to FIRE to <em>strafe</em>: the hull crabs sideways while the gun stays locked on target.<br>
+    <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Push the stick <em>left or right</em> to <strong>strafe</strong>: the hull crabs sideways while the gun stays locked on target. When you're stopped, the hull stays put so you can aim freely. Tap <strong>LOCK</strong> to have the turret track the enemy you're looking at (leads moving targets; tap again to release).<br>
     <strong>Aim:</strong> In the gunner view, drag left/right on the right half to slew the turret. In top-down, tap where you want to point. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
     <strong>Machine gun:</strong> Select <strong>MG</strong> and hold FIRE for continuous fire. It shreds scouts and light tanks from the side or rear but only sparks off heavy armour, and it overheats after about five seconds — watch the heat bar.<br>
     <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire.<br>
-    <strong>Keys:</strong> W/S gears, A/D slew turret (hull follows), Z/X strafe, L lock target, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-5 ammo (5 = machine gun), M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
+    <strong>Keys:</strong> W/S gears, A/D strafe (gun stays on target), L lock target, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-5 ammo (5 = machine gun), M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
   </div>
 </div>
 
@@ -2162,7 +2162,7 @@ const Input = {
   fireTouch: { active: false, id: null },
   fireHeld: false,
   elevTouch: { active: false, id: null },
-  strafe: 0,          // -1 left, 1 right while a strafe button is held
+  stickStrafe: 0,     // -1..1 from the stick's X axis
   lockRequest: false,
 
   buttons: [], // Rebuilt per frame: {x,y,r,action,label,id?}
@@ -2209,10 +2209,8 @@ function layoutUi() {
   Input.buttons.push({ x: w - 36, y: 200, r: BTN_RADIUS - 2, action: 'gyro', label: 'TILT' });
   Input.buttons.push({ x: w - 36, y: 248, r: BTN_RADIUS - 4, action: 'recal', label: '⟲' });
   Input.buttons.push({ x: w - 36, y: 296, r: BTN_RADIUS - 4, action: 'mute', label: Sound.enabled ? 'SND' : 'MUTE' });
-  // Target lock (toggle) + strafe buttons (hold) to the left of FIRE
-  Input.buttons.push({ x: w - 244, y: h - 100, r: 22, action: 'lock', label: 'LOCK' });
-  Input.buttons.push({ x: w - 190, y: h - 100, r: 22, action: 'strafe', dir: -1, label: '◀' });
-  Input.buttons.push({ x: w - 140, y: h - 100, r: 22, action: 'strafe', dir: 1, label: '▶' });
+  // Target lock (toggle) to the left of FIRE
+  Input.buttons.push({ x: w - 150, y: h - 100, r: 24, action: 'lock', label: 'LOCK' });
   // Request stack (supply, medic, smoke)
   Input.buttons.push({ x: 36, y: 36,  r: BTN_RADIUS, action: 'supply', label: 'SUP' });
   Input.buttons.push({ x: 36, y: 96,  r: BTN_RADIUS - 2, action: 'medic', label: 'MED' });
@@ -2302,7 +2300,6 @@ function doButton(b) {
   else if (b.action === 'medic')  { if (S.player) S.player.requestMedic(); }
   else if (b.action === 'smoke')  { if (S.player) S.player.requestSmoke(); }
   else if (b.action === 'ammo')   { if (S.player) { S.player.selectedAmmo = b.ammo; Sound.click(); } }
-  else if (b.action === 'strafe') { Input.strafe = b.dir; }
   else if (b.action === 'lock')   { toggleLock(); }
   else if (b.action === 'gyro') {
     if (Gyro.enabled) {
@@ -2427,8 +2424,6 @@ function endTouch(id) {
   } else if (info.type === 'elev') {
     Input.elevTouch.active = false;
     Input.elevTouch.id = null;
-  } else if (info.type === 'btn' && info.btn && info.btn.action === 'strafe') {
-    Input.strafe = 0;
   }
   Input.touches.delete(id);
 }
@@ -2510,16 +2505,15 @@ function applyPlayerInput(dt) {
     const rawX = clamp(dx / maxR, -1, 1);
     const rawY = clamp(dy / maxR, -1, 1);
 
-    // X-axis slews the TURRET (the hull follows the gun when moving — see below)
+    // X-axis = STRAFE: the hull crabs that way while the gun stays on target (see below)
     const steerDead = 0.12;
     const absX = Math.abs(rawX);
     if (absX >= steerDead) {
       const sign = Math.sign(rawX);
       const t = (absX - steerDead) / (1 - steerDead);
-      const rate = sign * Math.min(1, t * (1 + t * 0.4));
-      p.turretTarget = normAngle(p.turretTarget + rate * 1.7 * dt);
-      p.stickSlew = true;
-    } else p.stickSlew = false;
+      Input.stickStrafe = sign * Math.min(1, t * (1 + t * 0.4));
+    } else Input.stickStrafe = 0;
+    p.stickSlew = false;
 
     // Gear: direct Y position (sticky WHILE held, releases to 0 on lift)
     // -rawY because screen Y grows downward (push UP = negative dy)
@@ -2533,13 +2527,8 @@ function applyPlayerInput(dt) {
     // Release: brake to stop
     p.targetGear = 0;
     p.stickSlew = false;
+    Input.stickStrafe = 0;
   }
-
-  // --- Keyboard A/D slew the turret too ---
-  let kSteer = 0;
-  if (Input.keys['a'] || Input.keys['arrowleft']) kSteer -= 1;
-  if (Input.keys['d'] || Input.keys['arrowright']) kSteer += 1;
-  if (kSteer !== 0) { p.turretTarget = normAngle(p.turretTarget + kSteer * 1.7 * dt); p.stickSlew = true; }
 
   // --- Turret aim ---
   // Gyro takes priority over touch/mouse when enabled
@@ -2575,11 +2564,11 @@ function applyPlayerInput(dt) {
     }
   }
 
-  // --- Strafe (hold ◀/▶ or Z/X): the hull crabs sideways and keeps rolling,
+  // --- Strafe (stick left/right, or A/D / Z/X): the hull crabs sideways and keeps rolling,
   //     while the turret stays locked on where you're looking ---
-  let strafe = Input.strafe;
-  if (Input.keys['z']) strafe = -1;
-  if (Input.keys['x']) strafe = 1;
+  let strafe = Input.stickStrafe || 0;
+  if (Input.keys['a'] || Input.keys['arrowleft'] || Input.keys['z']) strafe = -1;
+  if (Input.keys['d'] || Input.keys['arrowright'] || Input.keys['x']) strafe = 1;
   if (strafe && p.alive) {
     if (p.strafeLock === undefined || p.strafeLock === null) p.strafeLock = p.turretTarget;   // world-frame lock
     p.turretTarget = p.strafeLock;
@@ -4976,9 +4965,8 @@ function renderHUD() {
     const gyroActive = b.action === 'gyro' && Gyro.enabled;
     const muted = b.action === 'mute' && !Sound.enabled;
     const voiceOn = b.action === 'voice' && Voice.wanted;
-    const strafing = b.action === 'strafe' && Input.strafe === b.dir;
     const locked = b.action === 'lock' && !!p.lockTarget;
-    const highlighted = activeAmmo || gyroActive || muted || voiceOn || strafing || locked;
+    const highlighted = activeAmmo || gyroActive || muted || voiceOn || locked;
     ctx.fillStyle = highlighted ? 'rgba(201, 168, 90, 0.2)' : COLORS.hudBg;
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, TAU);
@@ -4987,13 +4975,9 @@ function renderHUD() {
     ctx.lineWidth = highlighted ? 2 : 1.5;
     ctx.stroke();
     ctx.fillStyle = highlighted ? COLORS.accent : COLORS.text;
-    ctx.font = 'bold ' + (b.action === 'strafe' ? 16 : b.r > 20 ? 11 : 9) + 'px "Arial Narrow", sans-serif';
+    ctx.font = 'bold ' + (b.r > 20 ? 11 : 9) + 'px "Arial Narrow", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(b.label, b.x, b.y);
-    if (b.action === 'strafe') {
-      ctx.fillStyle = COLORS.textDim; ctx.font = '7px ui-monospace, monospace'; ctx.textBaseline = 'top';
-      ctx.fillText('STRAFE', b.x, b.y + b.r + 3);
-    }
   }
   // Request cooldown indicators
   function drawCooldownRing(action, cooldown, max) {
@@ -5160,7 +5144,7 @@ function renderHUD() {
     ctx.fillStyle = COLORS.textDim;
     ctx.font = '9px ui-monospace, monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('DRIVE', Input.joyAnchorL.x, Input.joyAnchorL.y + JOY_RADIUS + 6);
+    ctx.fillText('DRIVE · ◀ ▶ STRAFE', Input.joyAnchorL.x, Input.joyAnchorL.y + JOY_RADIUS + 6);
   }
 
   // --- Aim indicator (barrel line + crosshair where turret is pointed) ---
