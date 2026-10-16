@@ -231,7 +231,7 @@ html, body {
 
 <div class="overlay" id="menu">
   <h1 class="title">TANK COMMANDER</h1>
-  <div class="title-sub">FIELD DEPLOYMENT</div>
+  <div class="title-sub">FIELD DEPLOYMENT · <span id="verTag">v?</span></div>
 
   <div class="panel">
     <div class="panel-label">SELECT VEHICLE</div>
@@ -275,8 +275,9 @@ html, body {
     <strong>View:</strong> You start in the <strong>gunner's sight</strong> — a first-person view down the barrel; the gold HULL marker shows which way the tracks point. Tap <strong>VIEW</strong> (or say "top down") for the overhead driver cam. Radar panel in the corner shows the whole battlefield (blue dots = team, red dots = detected enemies, houses = bases). Tap MAP to swap to the big tactical map (driver view goes to the corner).<br>
     <strong>Drive:</strong> <em>The gun steers.</em> Point the turret where you want to go and push the left stick up — the hull swings round to follow the gun. Further up = faster, down = reverse, release = brake. Push the stick <em>left or right</em> to <strong>strafe</strong>: the hull crabs sideways while the gun stays locked on target. When you're stopped, the hull stays put so you can aim freely. Tap <strong>LOCK</strong> to have the turret track the enemy you're looking at (leads moving targets; tap again to release).<br>
     <strong>Aim:</strong> In the gunner view, drag left/right on the right half to slew the turret. In top-down, tap where you want to point. Or tap <strong>TILT</strong> for gyro aim — tilt device left/right to swing turret, tilt back to raise the gun. The <strong>⟲</strong> button recalibrates.<br>
+    <strong>Terrain:</strong> Trees can be shot down (one shell, or a burst of MG) or simply driven over — you lose most of your speed doing it. Rocks and buildings are solid.<br>
     <strong>Machine gun:</strong> Select <strong>MG</strong> and hold FIRE for continuous fire. It shreds scouts and light tanks from the side or rear but only sparks off heavy armour, and it overheats after about five seconds — watch the heat bar.<br>
-    <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire.<br>
+    <strong>Elevation:</strong> Drag the <strong>ELEV</strong> slider above FIRE to lob shells over trees and rooftops — the gold ring shows where they land. Bottom = direct fire. Or press <strong>+</strong> to zoom the sight (2×/4×): it ranges the enemy in the sight and sets the elevation itself — direct if the line is clear, a lob if a wall or tree is in the way.<br>
     <strong>Keys:</strong> W/S gears, A/D strafe (gun stays on target), L lock target, mouse aims, click or space fires, ↑/↓ gun elevation (0 resets), 1-5 ammo (5 = machine gun), M map, C gunner/top-down, Q/E zoom, R supply, G medic, F smoke, N mute, V voice commands.
   </div>
 </div>
@@ -306,6 +307,7 @@ html, body {
 
 /* ============== CONFIG ============== */
 
+const GAME_VERSION = '2.9.0';   // shown on the menu and HUD; bump on every publish
 const WORLD_W = 4000;
 const WORLD_H = 2500;
 
@@ -415,9 +417,10 @@ const RICOCHET_ANGLE = 70 * Math.PI / 180;
 
 /* ---- DIFFICULTY (persisted) — scales the AI, never the player ---- */
 const DIFFICULTIES = {
-  ROOKIE:  { name: 'ROOKIE',  desc: 'AI reloads slowly, hits softly, spots late', aiReload: 1.7, aiDamage: 0.5, aiSight: 0.75 },
-  REGULAR: { name: 'REGULAR', desc: 'Balanced',                                     aiReload: 1.0, aiDamage: 1.0, aiSight: 1.0 },
-  VETERAN: { name: 'VETERAN', desc: 'AI reloads fast, hits hard, spots far',        aiReload: 0.8, aiDamage: 1.25, aiSight: 1.2 },
+  // aiAim = seconds the AI needs on a fresh target before it fires; aiError = aim scatter (radians) at full sight range
+  ROOKIE:  { name: 'ROOKIE',  desc: 'AI slow to aim, misses often, hits softly',  aiReload: 1.9, aiDamage: 0.5,  aiSight: 0.7,  aiAim: 2.6, aiError: 0.09 },
+  REGULAR: { name: 'REGULAR', desc: 'A proper hunt — AI takes time to line up',  aiReload: 1.35, aiDamage: 0.85, aiSight: 0.9,  aiAim: 1.6, aiError: 0.05 },
+  VETERAN: { name: 'VETERAN', desc: 'AI quick on the draw and accurate',          aiReload: 0.9, aiDamage: 1.15, aiSight: 1.15, aiAim: 0.7, aiError: 0.02 },
 };
 const Difficulty = {
   key: 'REGULAR',
@@ -1106,8 +1109,10 @@ const Gyro = {
     const turretOffset = this.dGamma * this.turretSens;
     S.player.turretTarget = this.baseTurret + turretOffset;
     // Elevation: tilt the device back to raise the gun (lob farther), forward to lower it
-    const e = clamp(this.baseElev + this.dBeta * this.elevSens, 0, 1);
-    S.player.elevation = e < 0.06 ? 0 : e;
+    if (!S.player.autoLob) {
+      const e = clamp(this.baseElev + this.dBeta * this.elevSens, 0, 1);
+      S.player.elevation = e < 0.06 ? 0 : e;
+    }
   },
 };
 
@@ -1450,7 +1455,7 @@ class Tank {
     this.mgJammed = false;
     // Upgrades apply to player only (AI stays balanced)
     this.armorMult   = isPlayer ? (1 + Progression.armor  * ARMOR_PER_LEVEL)  : 1;
-    this.reloadMult  = isPlayer ? (1 - Progression.reload * RELOAD_PER_LEVEL) : (team === 'red' ? Difficulty.spec.aiReload : 1);
+    this.reloadMult  = isPlayer ? (1 - Progression.reload * RELOAD_PER_LEVEL) : (team === 'red' ? Difficulty.spec.aiReload : 1.2);
     this.turretMult  = isPlayer ? (1 + Progression.turret * TURRET_PER_LEVEL) : 1;
     // Velocity direction (separate from hullAngle to allow sliding on ice)
     this.velAngle = this.hullAngle;
@@ -1463,6 +1468,9 @@ class Tank {
     this.aiTimer = 0;
     this.aiTarget = null;
     this.aiPatrolTarget = null;
+    this.aiAimTimer = 0;      // time spent acquiring the current target
+    this.aiAimTargetId = null;
+    this.aiAimErr = 0;        // current aim scatter (re-rolled per shot)
     this.smokeTimer = 0;
     this.id = Math.random().toString(36).slice(2, 8);
     this.kills = 0;
@@ -1542,10 +1550,17 @@ class Tank {
     this.x = clamp(this.x, this.radius + 2, WORLD_W - this.radius - 2);
     this.y = clamp(this.y, this.radius + 2, WORLD_H - this.radius - 2);
 
-    // Collide with obstacles
+    // Collide with obstacles (trees get knocked flat; the tank loses most of its speed)
     for (const ob of S.obstacles) {
       const d = dist(this, ob);
       const minD = this.radius + ob.r;
+      if (d < minD && ob.hp !== Infinity) {
+        fellTree(ob, this.x + Math.cos(this.hullAngle) * this.radius, this.y + Math.sin(this.hullAngle) * this.radius);
+        this.speed *= 0.45;
+        this.recoil = Math.max(this.recoil, 0.25);
+        if (this.isPlayer) showMessage('TREE DOWN', 0.8);
+        continue;
+      }
       if (d < minD) {
         const push = minD - d + 0.5;
         const ang = Math.atan2(this.y - ob.y, this.x - ob.x);
@@ -1961,6 +1976,10 @@ class Bullet {
           } else {
             S.effects.push(new Spark(this.x, this.y, true));
           }
+          if (ob.hp !== Infinity) {
+            ob.hp -= this.type === 'HE' ? 100 : this.dmg;
+            if (ob.hp <= 0) fellTree(ob, this.x, this.y);
+          }
           this.dead = true;
           return;
         }
@@ -1994,6 +2013,8 @@ class Obstacle {
     this.seed = Math.random();
     // Height (world units) — arcing shells pass over anything lower than their altitude
     this.h = kind === 'rock' ? 22 : 36;
+    // Trees can be shot down or bulldozed; rocks and buildings are solid
+    this.hp = (kind === 'tree' || kind === 'snowtree') ? 30 : Infinity;
   }
 }
 
@@ -2271,6 +2292,65 @@ function updateLock(p, dt) {
   return true;
 }
 
+function cabZoom(dir) {
+  const steps = [1, 2, 4];
+  let i = steps.indexOf(CAB.zoom); if (i < 0) i = 0;
+  i = clamp(i + dir, 0, steps.length - 1);
+  CAB.zoom = steps[i];
+  showMessage(CAB.zoom === 1 ? 'SIGHT 1× — MANUAL ELEVATION' : 'SIGHT ' + CAB.zoom + '× — AUTO RANGING', 1.3);
+  Sound.click();
+}
+/* Auto lob: with the sight zoomed, range the enemy in the sight. If a wall/tree blocks the direct line,
+   set the elevation so the shell lobs onto it; otherwise set direct fire. Manual slider at 1×. */
+function elevationForDistance(d, ammoSpec) {
+  const span = ammoSpec.range * 0.95 - ARC_MIN_DIST;
+  return clamp((d - ARC_MIN_DIST) / span, 0.06, 1);
+}
+function directLineBlocked(p, t) {
+  const d = dist(p, t);
+  for (const ob of S.obstacles) {
+    if (ob.h < ARC_HIT_ALT) continue;
+    if (pointLineDistSq(ob.x, ob.y, p.x, p.y, t.x, t.y) < ob.r * ob.r) {
+      const along = ((ob.x - p.x) * (t.x - p.x) + (ob.y - p.y) * (t.y - p.y)) / (d * d);
+      if (along > 0.05 && along < 0.95) return true;
+    }
+  }
+  return false;
+}
+function autoRange(p) {
+  p.autoLob = null;
+  if (S.view !== 'cab' || CAB.zoom <= 1 || !p.alive) return;
+  let t = p.lockTarget && p.lockTarget.alive ? p.lockTarget : null;
+  if (!t) {
+    const cone = (CAB.fov / CAB.zoom / 2) * 0.7;
+    let best = null, bestD = Infinity;
+    for (const e of S.tanks) {
+      if (e.team !== 'red' || !e.alive || (S.playerSpotted.get(e.id) || 0) <= S.time) continue;
+      const d = dist(e, p);
+      const off = Math.abs(angleDiff(p.turretAngle, Math.atan2(e.y - p.y, e.x - p.x)));
+      if (off < cone && d < bestD) { bestD = d; best = e; }
+    }
+    t = best;
+  }
+  if (!t) return;
+  const spec = AMMO[p.selectedAmmo];
+  const d = dist(t, p);
+  if (p.selectedAmmo === 'MG') { p.autoLob = { target: t, d, lob: false }; p.elevation = 0; return; }
+  const blocked = directLineBlocked(p, t);
+  if (blocked && d > ARC_MIN_DIST && d < spec.range * 0.95) { p.elevation = elevationForDistance(d, spec); p.autoLob = { target: t, d, lob: true }; }
+  else { p.elevation = 0; p.autoLob = { target: t, d, lob: false }; }
+}
+
+function fellTree(ob, x, y) {
+  const i = S.obstacles.indexOf(ob);
+  if (i < 0) return;
+  S.obstacles.splice(i, 1);
+  for (let k = 0; k < 6; k++) S.effects.push(new Smoke(ob.x + rand(-ob.r, ob.r) * 0.6, ob.y + rand(-ob.r, ob.r) * 0.6));
+  S.effects.push(new Spark(x || ob.x, y || ob.y, false));
+  Sound.impact({ x: ob.x, y: ob.y }, false);
+  Link.terrainKey = '';   // companion map re-sends terrain
+}
+
 function toggleMapView() {
   if (S.view === 'map') S.view = S.lastWorldView || 'cab';
   else { S.lastWorldView = S.view; S.view = 'map'; }
@@ -2294,8 +2374,8 @@ function doButton(b) {
   if (!b) return;
   if (b.action === 'toggleMap') toggleMapView();
   else if (b.action === 'view') { setWorldView(S.lastWorldView === 'cab' ? 'tank' : 'cab'); Sound.click(); }
-  else if (b.action === 'zoomIn') S.zoom = clamp(S.zoom * 1.25, S.minZoom, S.maxZoom);
-  else if (b.action === 'zoomOut') S.zoom = clamp(S.zoom / 1.25, S.minZoom, S.maxZoom);
+  else if (b.action === 'zoomIn')  { if (S.view === 'cab') cabZoom(1); else S.zoom = clamp(S.zoom * 1.25, S.minZoom, S.maxZoom); }
+  else if (b.action === 'zoomOut') { if (S.view === 'cab') cabZoom(-1); else S.zoom = clamp(S.zoom / 1.25, S.minZoom, S.maxZoom); }
   else if (b.action === 'supply') { if (S.player) S.player.requestAirdrop(); }
   else if (b.action === 'medic')  { if (S.player) S.player.requestMedic(); }
   else if (b.action === 'smoke')  { if (S.player) S.player.requestSmoke(); }
@@ -2401,6 +2481,7 @@ canvas.addEventListener('touchmove', e => {
 function setElevationFromTouch(y) {
   const es = Input.elevSlider;
   if (!es || !S.player) return;
+  if (S.player.autoLob) { showMessage('AUTO RANGING — ZOOM OUT FOR MANUAL', 1.2); return; }
   const v = clamp((es.bottom - y) / (es.bottom - es.top), 0, 1);
   S.player.elevation = v < 0.06 ? 0 : v;   // snap to direct fire at the bottom
   if (Gyro.enabled) Gyro.baseElev = S.player.elevation;
@@ -2463,8 +2544,8 @@ window.addEventListener('keydown', e => {
   if (k === 'm' || k === 'tab') toggleMapView();
   if (k === 'c') setWorldView(S.lastWorldView === 'cab' ? 'tank' : 'cab');
   if (k === 'l') toggleLock();
-  if (k === 'q') S.zoom = clamp(S.zoom / 1.2, S.minZoom, S.maxZoom);
-  if (k === 'e') S.zoom = clamp(S.zoom * 1.2, S.minZoom, S.maxZoom);
+  if (k === 'q') { if (S.view === 'cab') cabZoom(-1); else S.zoom = clamp(S.zoom / 1.2, S.minZoom, S.maxZoom); }
+  if (k === 'e') { if (S.view === 'cab') cabZoom(1);  else S.zoom = clamp(S.zoom * 1.2, S.minZoom, S.maxZoom); }
   if (S.player) {
     if (k === '1') S.player.selectedAmmo = 'AP';
     if (k === '2') S.player.selectedAmmo = 'HE';
@@ -2541,14 +2622,22 @@ function applyPlayerInput(dt) {
       if (Input.aimTouch.active) {
         const dx = Input.aimTouch.x - Input.aimTouch.lastX;
         Input.aimTouch.lastX = Input.aimTouch.x; Input.aimTouch.lastY = Input.aimTouch.y;
-        if (dx) p.turretTarget = normAngle(p.turretTarget + dx * (CAB.fov / w) * 1.15);
+        if (dx) {
+          // Softer than 1:1, with a fine zone for small moves; and the target is clamped to within
+          // ~12° of where the gun actually points, so a long drag can't wind up an overshoot.
+          const k = (CAB.fov / CAB.zoom / w) * (Math.abs(dx) < 4 ? 0.45 : 0.75);
+          let tgt = normAngle(p.turretTarget + dx * k);
+          const lead = angleDiff(p.turretAngle, tgt);
+          if (Math.abs(lead) > 0.21) tgt = normAngle(p.turretAngle + Math.sign(lead) * 0.21);
+          p.turretTarget = tgt;
+        }
       } else if (Input.mouseX && w > 640 && Input.mouseDown) {
         const off = (Input.mouseX - w / 2) / (w / 2);
         if (Math.abs(off) > 0.08) p.turretTarget = normAngle(p.turretAngle + off * 0.9);
       } else if (Input.mouseX && w > 640 && !p.stickSlew && Input.mouseMoved) {
         // Hover: aim where the mouse points on the ground (only while the mouse is actually moving)
         const off = (Input.mouseX - w / 2) / (w / 2);
-        p.turretTarget = normAngle(CAB.yaw + off * (CAB.fov / 2));
+        p.turretTarget = normAngle(CAB.yaw + off * (CAB.fov / CAB.zoom / 2));
       }
     } else {
       // Mouse (desktop)
@@ -2583,6 +2672,7 @@ function applyPlayerInput(dt) {
 
   // --- Target lock overrides manual aim ---
   updateLock(p, dt);
+  autoRange(p);
 
   // --- Turret steering: the hull swings to follow the gun whenever the tank is moving.
   //     Stationary = free aim (no pivoting while you line up a shot). ---
@@ -2598,7 +2688,7 @@ function applyPlayerInput(dt) {
   }
 
   // --- Elevation (arrow up/down held; '0' = direct fire) ---
-  if (!Gyro.enabled) {
+  if (!Gyro.enabled && !p.autoLob) {
     if (Input.keys['arrowup'])   p.elevation = clamp(p.elevation + 0.8 * dt, 0, 1);
     if (Input.keys['arrowdown']) p.elevation = clamp(p.elevation - 0.8 * dt, 0, 1);
     if (p.elevation < 0.03 && Input.keys['arrowdown']) p.elevation = 0;
@@ -2686,6 +2776,7 @@ function aiThink(t, dt) {
     t.aiState = 'engage';
   } else {
     t.aiState = 'patrol';
+    t.aiAimTargetId = null; t.aiAimTimer = 0;
   }
 
   // Act on state
@@ -2701,19 +2792,27 @@ function aiThink(t, dt) {
     else if (bestD < idealD * 0.6) t.targetGear = -1;
     else t.targetGear = 1;
 
-    // Lead target
+    // Acquisition: a fresh target takes time to line up (difficulty-scaled); switching targets resets it
+    const D = t.team === 'red' ? Difficulty.spec : DIFFICULTIES.REGULAR;
+    if (t.aiAimTargetId !== best.id) { t.aiAimTargetId = best.id; t.aiAimTimer = 0; t.aiAimErr = (Math.random() * 2 - 1) * D.aiError; }
+    t.aiAimTimer += dt;
+    const acquired = t.aiAimTimer >= D.aiAim;
+
+    // Lead target, with scatter that grows with range (re-rolled after every shot)
     const ammoSpec = AMMO[t.selectedAmmo];
     const timeToHit = bestD / ammoSpec.v;
     const leadVx = Math.cos(best.hullAngle) * best.speed;
     const leadVy = Math.sin(best.hullAngle) * best.speed;
     const aimX = best.x + leadVx * timeToHit;
     const aimY = best.y + leadVy * timeToHit;
-    t.turretTarget = Math.atan2(aimY - t.y, aimX - t.x);
+    const rangeFrac = clamp(bestD / (t.spec.sight * mapSight), 0.2, 1.2);
+    t.turretTarget = Math.atan2(aimY - t.y, aimX - t.x) + t.aiAimErr * rangeFrac;
 
-    // Fire if aligned
+    // Fire if aligned and acquired
     const turretOff = Math.abs(angleDiff(t.turretAngle, t.turretTarget));
-    if (turretOff < 0.08 && t.reloadTimer <= 0 && t.ammo[t.selectedAmmo] > 0) {
+    if (acquired && turretOff < 0.06 && t.reloadTimer <= 0 && t.ammo[t.selectedAmmo] > 0) {
       t.firing = true;
+      t.aiAimErr = (Math.random() * 2 - 1) * D.aiError;
     } else {
       t.firing = false;
     }
@@ -2800,7 +2899,7 @@ function initWorld() {
   S.view = 'cab';
   S.lastWorldView = 'cab';
   S.zoom = 0.65;
-  CAB.yaw = 0;
+  CAB.yaw = 0; CAB.zoom = 1;
   S.airdropCooldown = 0;
   S.medicCooldown = 0;
   S.smokeCooldown = 0;
@@ -3903,6 +4002,7 @@ const CAB = {
   near: 6,
   far: 2600,
   horizon: 0.44,   // horizon line as a fraction of screen height
+  zoom: 1,         // sight magnification 1 / 2 / 4 — zoomed in, the sight ranges the target and auto-sets the lob
   yaw: 0,          // smoothed view direction (follows the turret)
   pitchPx: 0,      // small screen-space bob from recoil
 };
@@ -3911,7 +4011,7 @@ const CAB = {
 function cabCamera() {
   const w = window.innerWidth, h = window.innerHeight;
   const p = S.player;
-  const f = (w / 2) / Math.tan(CAB.fov / 2);
+  const f = (w / 2) / Math.tan(CAB.fov / CAB.zoom / 2);
   const yaw = CAB.yaw;
   return {
     w, h, f, yaw,
@@ -4294,6 +4394,17 @@ function renderCabView() {
   ctx.moveTo(w / 2, cy + 12); ctx.lineTo(w / 2, cy + 44);
   ctx.stroke();
   ctx.fillStyle = sightCol; ctx.beginPath(); ctx.arc(w / 2, cy, 2, 0, TAU); ctx.fill();
+  // Zoom + ranging readout under the sight
+  ctx.font = 'bold 10px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  if (CAB.zoom > 1) {
+    ctx.fillStyle = COLORS.accent;
+    const rd = p.autoLob ? ('RNG ' + Math.round(p.autoLob.d * CAB.M_PER_UNIT) + 'm · ' + (p.autoLob.lob ? 'LOB' : 'DIRECT')) : 'RNG ---';
+    ctx.fillText(CAB.zoom + '×  ' + rd, w / 2, cy + 50);
+    // Zoom frame: darken the edges like a scope
+    const vg = ctx.createRadialGradient(w / 2, cy, Math.min(w, h) * 0.38, w / 2, cy, Math.max(w, h) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+  }
   // Range ladder down the centre
   ctx.font = '8px ui-monospace, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(214, 210, 195, 0.55)';
@@ -5068,8 +5179,8 @@ function renderHUD() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.fillText('ELEV', es.x, es.top - 7);
     ctx.textBaseline = 'top';
-    ctx.fillStyle = p.elevation > 0.02 ? COLORS.accent : COLORS.textDim;
-    ctx.fillText(p.elevation > 0.02 ? 'LOB' : 'DIRECT', es.x, es.bottom + 7);
+    ctx.fillStyle = p.autoLob ? COLORS.accent : p.elevation > 0.02 ? COLORS.accent : COLORS.textDim;
+    ctx.fillText(p.autoLob ? (p.autoLob.lob ? 'AUTO LOB' : 'AUTO DIR') : p.elevation > 0.02 ? 'LOB' : 'DIRECT', es.x, es.bottom + 7);
   }
 
   // --- Fire button ---
@@ -5269,6 +5380,12 @@ function renderHUD() {
     ctx.fill();
   }
 
+  // --- Version tag ---
+  ctx.fillStyle = 'rgba(107, 114, 102, 0.55)';
+  ctx.font = '8px ui-monospace, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('v' + GAME_VERSION, w / 2, h - 4);
+
   // --- Message banner ---
   if (S.message) {
     const alpha = clamp(S.messageUntil - S.time, 0, 1);
@@ -5447,6 +5564,7 @@ function init() {
   // Load persisted progression + audio settings
   Progression.load();
   Difficulty.load();
+  const vt = document.getElementById('verTag'); if (vt) vt.textContent = 'v' + GAME_VERSION;
   buildDifficultyUI();
   Sound.loadVolumes();
   const mv = document.getElementById('musicVol'), sv = document.getElementById('sfxVol');
